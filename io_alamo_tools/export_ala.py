@@ -397,10 +397,18 @@ def create_visibility_chunk(armature, bone):
 
     action = utils.getCurrentAction()
     animLength = action.AnimationEndFrame
+    
+    if pose.parent != None:
+        parent = True
 
     scene.frame_set(0)
     while scene.frame_current <= animLength:
-        if pose.proxyIsHiddenAnimation == True:
+        if pose.parent:
+            if pose.proxyIsHiddenAnimation == True or pose.parent.proxyIsHiddenAnimation == True:
+                binary += '0'
+            else:
+                binary += '1'
+        elif pose.proxyIsHiddenAnimation == True:
             binary += '0'
         else:
             binary += '1'
