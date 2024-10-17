@@ -1,4 +1,1 @@
-*
-!.gitignore 
-!*/
-!io_alamo_tools/*
+*.lnk

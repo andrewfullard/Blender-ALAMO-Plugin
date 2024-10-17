@@ -104,11 +104,6 @@ def checkFaceNumber(object):
         return [({'ERROR'}, f'ALAMO - {object.name} exceeds maximum face limit; split mesh into multiple objects')]
     return []
 
-def checkAutosmooth(object):  # prints a warning if Autosmooth is used
-    if object.data.use_auto_smooth:
-        return [({'ERROR'}, f'ALAMO - {object.name} uses autosmooth, ingame shading might not match blender; use edgesplit instead')]
-    return []
-
 def checkTranslation(object):  # prints warning when translation is not default
     if object.location != mathutils.Vector((0.0, 0.0, 0.0)) or object.rotation_euler != mathutils.Euler((0.0, 0.0, 0.0), 'XYZ'):
         return [({'ERROR'}, f'ALAMO - {object.name} is not aligned with the world origin; apply translation or bind to bone')]
@@ -187,7 +182,6 @@ def validate(mesh_list):
         checkShadowMesh,
         checkUV,
         checkFaceNumber,
-        checkAutosmooth,
         checkTranslation,
         checkInvalidArmatureModifier,
         checkScale,

@@ -448,7 +448,7 @@ class ALO_Importer(bpy.types.Operator):
 
             group_out = node('NodeGroupOutput')
             group_out.location.x += 200.0
-            node_group.outputs.new('NodeSocketShader', 'Surface')
+            node_group.interface.new_socket(socket_type='NodeSocketShader', name='Surface', in_out='OUTPUT')
 
             mix_shader = node("ShaderNodeMixShader")
 
@@ -462,9 +462,10 @@ class ALO_Importer(bpy.types.Operator):
             if is_emissive:
                 group_in = node('NodeGroupInput')
                 group_in.location.x -= 700
-                emissive = node_group.inputs.new(
-                    'NodeSocketFloat', 'Emissive Strength')
-                emissive.default_value = 1.0
+                emissive = node_group.interface.new_socket(socket_type='NodeSocketFloat',
+                                                           name='Emissive Strength',
+                                                           in_out='INPUT')
+                emissive.default_value = 100.0
                 color = node("ShaderNodeEmission")
                 link(group_in.outputs[0], color.inputs[1])
                 eevee_alpha_fix = node("ShaderNodeInvert")
@@ -504,15 +505,24 @@ class ALO_Importer(bpy.types.Operator):
 
             group_in = node('NodeGroupInput')
             group_in.location.x -= 700
-            node_group.inputs.new('NodeSocketColor', 'Team Color')
-            spec = node_group.inputs.new(
-                'NodeSocketFloat', 'Specular Intensity')
+            node_group.interface.new_socket(socket_type='NodeSocketColor',
+                                            name='Team Color',
+                                            in_out='INPUT')
+            spec = node_group.interface.new_socket(socket_type='NodeSocketFloat',
+                                                   name='Specular Intensity',
+                                                   in_out='INPUT')
             spec.default_value = 0.1
 
             group_out = node('NodeGroupOutput')
-            node_group.outputs.new('NodeSocketColor', 'Base Color')
-            node_group.outputs.new('NodeSocketFloat', 'Specular')
-            node_group.outputs.new('NodeSocketVector', 'Normal')
+            node_group.interface.new_socket(socket_type='NodeSocketColor',
+                                            name='Base Color',
+                                            in_out='OUTPUT')
+            node_group.interface.new_socket(socket_type='NodeSocketFloat',
+                                            name='Specular',
+                                            in_out='OUTPUT')
+            node_group.interface.new_socket(socket_type='NodeSocketVector',
+                                            name='Normal',
+                                            in_out='OUTPUT')
 
             base_image_node = node("ShaderNodeTexImage")
             base_image_node.location.x -= 500
@@ -577,7 +587,7 @@ class ALO_Importer(bpy.types.Operator):
                 normal_texture = bpy.data.images[material.NormalTexture]
                 normal_texture.alpha_mode = 'CHANNEL_PACKED'
                 normal_image_node.image = normal_texture
-                normal_image_node.image.colorspace_settings.name = 'Raw'
+                normal_image_node.image.colorspace_settings.name = 'Non-Color'
 
             return node_group
 
@@ -613,8 +623,8 @@ class ALO_Importer(bpy.types.Operator):
                 links.new(mat_group.outputs[0], output.inputs['Surface'])
             else:
                 bsdf = nodes.new("ShaderNodeBsdfPrincipled")
-                bsdf.inputs[4].default_value = 0.1  # Set metallic to 0.1
-                bsdf.inputs[7].default_value = 0.2  # Set roughness to 0.2
+                bsdf.inputs['Metallic'].default_value = 0.1
+                bsdf.inputs['Roughness'].default_value = 0.2
                 bsdf.location.x -= 300.0
                 links.new(bsdf.outputs['BSDF'], output.inputs['Surface'])
                 my_group = material_group_basic(
@@ -649,8 +659,13 @@ class ALO_Importer(bpy.types.Operator):
                     mat[texture] = oldMat[texture]
 
             obj = bpy.context.object
-
+            materials = []
+            for material in obj.data.materials:
+                if material.name != "DUMMYMATERIAL":
+                    materials.append(material)
             obj.data.materials.clear()
+            for material in materials:
+                obj.data.materials.append(material)
             obj.data.materials.append(mat)
             currentSubMesh.material = mat
 
@@ -932,7 +947,6 @@ class ALO_Importer(bpy.types.Operator):
         def hideObject(object):
 
             # set correct area type via context overwrite
-            context_override = bpy.context.copy()
             area = None
             for window in bpy.context.window_manager.windows:
                 screen = window.screen
@@ -940,13 +954,11 @@ class ALO_Importer(bpy.types.Operator):
                     if a.type == 'VIEW_3D':
                         area = a
                         break
-
-            context_override['area'] = area
-
-            bpy.ops.object.select_all(context_override, action='DESELECT')
-            object.select_set(True)
-            bpy.ops.object.hide_view_set(context_override)
-            object.hide_render = True
+            with context.temp_override(area=area):
+                bpy.ops.object.select_all(action='DESELECT')
+                object.select_set(True)
+                bpy.ops.object.hide_view_set()
+                object.hide_render = True
 
         def hideLODs():
             # hides all but the most detailed LOD in Blender
@@ -1081,9 +1093,6 @@ class ALO_Importer(bpy.types.Operator):
             if validate_material_prop(name):
                 exec('material.' + name + '= value')
 
-        def setRenderToEevee():
-            bpy.context.scene.render.engine = 'BLENDER_EEVEE'
-
         def loadAnimations(filePath):
             # remove ending
             filePath = filePath[0:-4]
@@ -1137,8 +1146,7 @@ class ALO_Importer(bpy.types.Operator):
 
         global file
         filepath = self.properties.filepath
-        file = open(filepath, 'rb')  # open file in read binary mode
-        # setRenderToEevee()
+        file = open(filepath, 'rb') #open file in read binary mode
         process_active_junk()
         removeShadowDoubles()
         hideLODs()
