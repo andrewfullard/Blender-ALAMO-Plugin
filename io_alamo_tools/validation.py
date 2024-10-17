@@ -127,7 +127,7 @@ def checkVertexGroups(object):
         total = 0
         for group in vertex.groups:
             if group.weight not in [0, 1]:
-                return [({'ERROR'}, f'ALAMO - Object {object.name} has improperly weighted vertex groups. Incorrect vertex group is {group.name}.')]
+                return [({'ERROR'}, f'ALAMO - Object {object.name} has improperly weighted vertex groups. Incorrect vertex group is {object.vertex_groups.get(group.group).name}.')]
             total += group.weight
         if total not in [0, 1]:
             return [({'ERROR'}, f'ALAMO - Object {object.name} has improper vertex groups, it must have one group only of weight 1.')]
