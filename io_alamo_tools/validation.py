@@ -36,6 +36,9 @@ def checkShadowMesh(object):
     if len(object.data.materials) > 0:
         shader = object.data.materials[0].shaderList.shaderList
         if shader in ['MeshShadowVolume.fx', 'RSkinShadowVolume.fx']:
+            has_edge_split = any(mod.type == 'EDGE_SPLIT' for mod in object.modifiers)
+            if has_edge_split:
+                error += [({'ERROR'}, f'ALAMO - Shadow mesh "{object.name}" should not have an Edge Split modifier')]
             bm = bmesh.new()  # create an empty BMesh
             bm.from_mesh(object.data)  # fill it in from a Mesh
             bm.verts.ensure_lookup_table()
@@ -119,20 +122,92 @@ def checkScale(object):  # prints warning when scale is not default
         return [({'ERROR'}, f'ALAMO - {object.name} has non-identity scale. Apply scale.')]
     return []
 
-# checks if vertices have 0 or > 1 groups
+def selectBadVertexGroups(object, bad_verts):
+    """Selects vertices by index in EDIT mode."""
+    if bpy.context.mode != 'OBJECT':
+        bpy.ops.object.mode_set(mode='OBJECT')
+
+    object.hide_set(False)
+    bpy.context.view_layer.objects.active = object
+    bpy.ops.object.mode_set(mode='EDIT')
+
+    bpy.ops.mesh.select_all(action='DESELECT')
+    bm = bmesh.from_edit_mesh(object.data)
+
+    for v in bm.verts:
+        if v.index in bad_verts:
+            v.select = True
+
+    bmesh.update_edit_mesh(object.data, loop_triangles=False, destructive=False)
+
+
 def checkVertexGroups(object):
     if object.vertex_groups is None or len(object.vertex_groups) == 0:
         return []
+
+    errors = []
+    bad_verts = set()
+
+    armature = utils.findArmature()
+    valid_bones = set()
+    if armature and hasattr(armature.data, "bones"):
+        valid_bones = {bone.name for bone in armature.data.bones}
+
     for vertex in object.data.vertices:
         total = 0
-        for group in vertex.groups:
-            if group.weight not in [0, 1]:
-                return [({'ERROR'}, f'ALAMO - Object {object.name} has improperly weighted vertex groups. Incorrect vertex group is {object.vertex_groups.get(group.group).name}.')]
-            total += group.weight
-        if total not in [0, 1]:
-            return [({'ERROR'}, f'ALAMO - Object {object.name} has improper vertex groups, it must have one group only of weight 1.')]
+        groups = []
 
-    return []
+        if not vertex.groups:
+            errors.append(
+                ({'ERROR'},
+                 f'ALAMO - Object "{object.name}" vertex {vertex.index} '
+                 f'has no vertex group assignment')
+            )
+            bad_verts.add(vertex.index)
+            continue
+
+        for group in vertex.groups:
+            vg = object.vertex_groups[group.group]
+            weight = group.weight
+            groups.append(vg.name)
+
+            if vg.name not in valid_bones:
+                errors.append(
+                    ({'ERROR'},
+                     f'ALAMO - Object "{object.name}" vertex {vertex.index} '
+                     f'is assigned to group "{vg.name}", but no matching bone exists or armature has not been set')
+                )
+                bad_verts.add(vertex.index)
+
+            if weight not in [0, 1]:
+                errors.append(
+                    ({'ERROR'},
+                     f'ALAMO - Object "{object.name}" vertex {vertex.index} '
+                     f'in group "{vg.name}" has invalid weight {weight:.3f}')
+                )
+                bad_verts.add(vertex.index)
+            total += weight
+
+        if total not in [0, 1]:
+            errors.append(
+                ({'ERROR'},
+                 f'ALAMO - Object "{object.name}" vertex {vertex.index} '
+                 f'has total weight {total:.3f} (should be 0 or 1)')
+            )
+            bad_verts.add(vertex.index)
+
+        if len(groups) > 1:
+            errors.append(
+                ({'ERROR'},
+                 f'ALAMO - Object "{object.name}" vertex {vertex.index} '
+                 f'is assigned to multiple groups: {", ".join(groups)}')
+            )
+            bad_verts.add(vertex.index)
+
+    if bad_verts:
+        selectBadVertexGroups(object, bad_verts)
+
+    return errors
 
 def checkNumBones(object):
     if type(object) != type(None) and object.type == 'MESH':
@@ -162,7 +237,7 @@ def checkProxyKeyframes():
     local_errors = []
     actions = bpy.data.actions
     current_frame = bpy.context.scene.frame_current
-    armature = findArmature()
+    armature = utils.findArmature()
     if armature is not None:
         for action in actions:
             print(action.name)
