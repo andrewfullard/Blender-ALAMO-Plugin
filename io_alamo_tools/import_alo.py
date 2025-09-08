@@ -312,7 +312,7 @@ class ALO_Importer(bpy.types.Operator):
                     face.material_index = subMeshCounter
 
             # create UVs
-            createUVLayer("UVMap", UVs)
+            createUVLayer("MainUV", UVs)
             assign_vertex_groups(animationMapping, currentMesh)
 
             return mesh
@@ -582,11 +582,12 @@ class ALO_Importer(bpy.types.Operator):
             return node_group
 
         def set_up_textures(material):
+
             material.use_nodes = True
             nt = material.node_tree
             nodes = nt.nodes
             links = nt.links
-            
+
             # clean up
             while(nodes):
                 nodes.remove(nodes[0])
@@ -642,24 +643,36 @@ class ALO_Importer(bpy.types.Operator):
 
             # TODO: Extract set_alamo_shader's shader finder to new function, use that here.
             material_props = ["BaseTexture", "NormalTexture", "GlossTexture", "WaveTexture", "DistortionTexture", "CloudTexture", "CloudNormalTexture", "Emissive", "Diffuse", "Specular", "Shininess", "Colorization", "DebugColor", "UVOffset", "Color", "UVScrollRate", "DiffuseColor",
-                              "EdgeBrightness", "BaseUVScale", "WaveUVScale", "DistortUVScale", "BaseUVScrollRate", "WaveUVScrollRate", "DistortUVScrollRate", "BendScale", "Diffuse1", "CloudScrollRate", "CloudScale", "SFreq",  "TFreq", "DistortionScale", "Atmosphere", "CityColor", "AtmospherePower", "SpecularTexture"]
+                              "EdgeBrightness", "BaseUVScale", "WaveUVScale", "DistortUVScale", "BaseUVScrollRate", "WaveUVScrollRate", "DistortUVScrollRate", "BendScale", "Diffuse1", "CloudScrollRate", "CloudScale", "SFreq",  "TFreq", "DistortionScale", "Atmosphere", "CityColor", "AtmospherePower"]
 
             for texture in material_props:
                 if texture in oldMat:
                     mat[texture] = oldMat[texture]
 
             obj = bpy.context.object
-
             obj.data.materials.clear()
             obj.data.materials.append(mat)
             currentSubMesh.material = mat
+
+            if mat.shaderList.shaderList in (
+                'RSkinAdditive.fx',
+                'RSkinAlpha.fx',
+                'RSkinBumpColorize.fx',
+                'RSkinGloss.fx',
+                'RSkinGlossColorize.fx',
+                'RSkinShadowVolume.fx'
+            ):
+                armature = utils.findArmature()
+                if armature:
+                    for bone in armature.data.bones:
+                        if bone.name not in [vg.name for vg in obj.vertex_groups]:
+                            obj.vertex_groups.new(name=bone.name)
 
         def assign_material(name):
             if name in bpy.data.materials:
                 return bpy.data.materials.get(name)
             else:
                 return bpy.data.materials.new(name)
-
 
         def create_object(currentMesh):
             global mesh
@@ -681,11 +694,6 @@ class ALO_Importer(bpy.types.Operator):
 
             if (currentMesh.collision == 1):
                 object.HasCollision = True
-
-            # create vertex groups
-            armature = utils.findArmature()
-            for bone in armature.data.bones:
-                vertgroup = object.vertex_groups.new(name=bone.name)
 
         def process_vertex_buffer_2(legacy, currentSubMesh):
             f = struct.Struct('f')  # unpack as float
@@ -765,8 +773,10 @@ class ALO_Importer(bpy.types.Operator):
 
             if shaderName == 'MeshCollision.fx':
                 mat = assign_material("COLLISION")
-            elif shaderName in ['RSkinShadowVolume.fx', 'MeshShadowVolume.fx']:
+            elif shaderName == 'MeshShadowVolume.fx':
                 mat = assign_material("SHADOW")
+            elif shaderName == ['RSkinShadowVolume.fx']:
+                mat = assign_material("SKINSHADOW")
             else:
                 mat = assign_material("DUMMYMATERIAL")
                 # DUMMYMATERIAL is a temporary material to allow Alamo shader properties to be assigned.
@@ -790,8 +800,7 @@ class ALO_Importer(bpy.types.Operator):
             currentSubMesh.material = mat
 
         def assign_vertex_groups(animation_mapping, currentMesh):
-            # assign vertex groups
-            object = bpy.context.view_layer.objects.active
+            obj = bpy.context.view_layer.objects.active
             counter = 0
             armatureObject = utils.findArmature()
             n_vertices = currentMesh.getNVerts()
@@ -800,16 +809,16 @@ class ALO_Importer(bpy.types.Operator):
             for subMesh in currentMesh.subMeshList:
                 bone_indices += subMesh.boneIndex
 
-            if(len(animation_mapping) != 0):
-                # add armature modifier
-                mod = object.modifiers.new('MyRigModif', 'ARMATURE')
+            if (len(animation_mapping) != 0 and len(obj.vertex_groups) > 0):
+                mod = obj.modifiers.new('MyRigModif', 'ARMATURE')
                 mod.object = armatureObject
                 mod.use_bone_envelopes = False
                 mod.use_vertex_groups = True
 
                 while counter < n_vertices:
-                    object.vertex_groups[animation_mapping[bone_indices[counter]]].add([
-                                                                                       counter], 1, 'ADD')
+                    group_index = animation_mapping[bone_indices[counter]]
+                    if group_index < len(obj.vertex_groups):
+                        obj.vertex_groups[group_index].add([counter], 1, 'ADD')
                     counter += 1
 
         # proxy and connection functions
@@ -928,7 +937,7 @@ class ALO_Importer(bpy.types.Operator):
                 counter += 1
             file.seek(1, 1)  # skip end byte of name
             return string
-        
+
         def hideObject(object):
 
             # set correct area type via context overwrite
@@ -1027,9 +1036,8 @@ class ALO_Importer(bpy.types.Operator):
                     return
 
         def validate_material_prop(name):
-            material_props = ["BaseTexture", "NormalTexture", "GlossTexture", "WaveTexture", "DistortionTexture", "CloudTexture", "CloudNormalTexture", "Emissive", "Diffuse", "Specular", "Shininess", "Colorization" \
-                , "DebugColor", "UVOffset", "Color", "UVScrollRate", "DiffuseColor", "EdgeBrightness", "BaseUVScale", "WaveUVScale", "DistortUVScale", "BaseUVScrollRate", "WaveUVScrollRate", "DistortUVScrollRate", "BendScale" \
-                , "Diffuse1", "CloudScrollRate", "CloudScale", "SFreq", "TFreq", "DistortionScale", "Atmosphere", "CityColor", "AtmospherePower", "SpecularTexture"]
+            material_props = ["BaseTexture", "NormalTexture", "GlossTexture", "WaveTexture", "DistortionTexture", "CloudTexture", "CloudNormalTexture", "Emissive", "Diffuse", "Specular", "Shininess", "Colorization", "DebugColor", "UVOffset", "Color", "UVScrollRate", "DiffuseColor",
+                              "EdgeBrightness", "BaseUVScale", "WaveUVScale", "DistortUVScale", "BaseUVScrollRate", "WaveUVScrollRate", "DistortUVScrollRate", "BendScale", "Diffuse1", "CloudScrollRate", "CloudScale", "SFreq",  "TFreq", "DistortionScale", "Atmosphere", "CityColor", "AtmospherePower"]
 
             if(name in material_props):
                 return True
@@ -1158,10 +1166,9 @@ class ALO_Importer(bpy.types.Operator):
                     createdArmature.parent = armature
                     createdArmature.parent_bone = self.parentName
                     createdArmature.parent_type = 'BONE'
-        for object in bpy.data.objects:
-            for constraint in object.constraints:
-                constraint.inverse_matrix = mathutils.Matrix.Identity(4)
-        return {'FINISHED'}            # this lets blender know the operator finished successfully.
+
+        # this lets blender know the operator finished successfully.
+        return {'FINISHED'}
 
     def invoke(self, context, event):
         context.window_manager.fileselect_add(self)
