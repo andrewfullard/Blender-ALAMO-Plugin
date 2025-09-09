@@ -185,11 +185,35 @@ def selectBadVertexGroups(object, bad_verts):
 
 
 def checkVertexGroups(object):
-    if object.vertex_groups is None or len(object.vertex_groups) == 0:
+    required_shaders = {
+        'RSkinAdditive.fx',
+        'RSkinAlpha.fx',
+        'RSkinBumpColorize.fx',
+        'RSkinGloss.fx',
+        'RSkinGlossColorize.fx',
+        'RSkinShadowVolume.fx'
+    }
+
+    shaders_in_object = set()
+    if object.material_slots:
+        for slot in object.material_slots:
+            mat = slot.material
+            if mat and hasattr(mat, "shaderList") and hasattr(mat.shaderList, "shaderList"):
+                shaders_in_object.add(mat.shaderList.shaderList)
+
+    if not (shaders_in_object & required_shaders):
         return []
 
     errors = []
     bad_verts = set()
+
+    if not object.vertex_groups or len(object.vertex_groups) == 0:
+        errors.append(
+            ({'ERROR'},
+             f'ALAMO - Object "{object.name}" uses skin shader(s) '
+             f'but has no vertex groups')
+        )
+        return errors
 
     armature = utils.findArmature()
     valid_bones = set()
@@ -251,6 +275,7 @@ def checkVertexGroups(object):
         selectBadVertexGroups(object, bad_verts)
 
     return errors
+
 
 def checkNumBones(object):
     if type(object) != type(None) and object.type == 'MESH':
