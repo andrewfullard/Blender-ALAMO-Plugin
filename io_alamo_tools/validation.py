@@ -87,6 +87,39 @@ def checkShadowMesh(object):
 
     return error
 
+def checkCollisionShader(object):
+    error = []
+
+    if object.type != 'MESH':
+        return error
+
+    uses_collision_shader = False
+
+    for mat in object.data.materials:
+        if (
+            mat
+            and hasattr(mat, "shaderList")
+            and mat.shaderList.shaderList == "MeshCollision.fx"
+        ):
+            uses_collision_shader = True
+            break
+
+    if uses_collision_shader:
+        if not object.HasCollision:
+            object.HasCollision = True
+            error.append(
+                ({'WARNING'}, f'ALAMO - {object.name} uses MeshCollision.fx; HasCollision was enabled automatically')
+            )
+
+        if not object.Hidden:
+            object.Hidden = True
+            error.append(
+                ({'WARNING'}, f'ALAMO - {object.name} uses MeshCollision.fx; Hidden was enabled automatically')
+            )
+
+    return error
+
+
 def checkUV(object):  # throws error if object lacks UVs
     error = []
     for material in object.data.materials:
@@ -328,6 +361,7 @@ def validate(mesh_list):
     errors = []
     checklist = [
         checkShadowMesh,
+        checkCollisionShader,
         checkUV,
         checkFaceNumber,
         checkAutosmooth,

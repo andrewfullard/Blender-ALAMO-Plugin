@@ -68,12 +68,25 @@ class ALO_Exporter(bpy.types.Operator, ExportHelper):
             description="Export all animation actions as .ALA files, into the same directory",
             default=True,
             )
+
     exportHiddenObjects : BoolProperty(
-            name="Export Hidden Objects",
-            description="Export all objects, regardless of if they are hidden",
+            name="Export Set Hidden Objects",
+            description="Export all objects with Set Hidden to true in alamo properties",
             default=True,
             )
+    
+    exportSelectedOnly : BoolProperty(
+        name="Export Selected Only",
+        description="Export only selected objects",
+        default=False,
+    )
 
+    exportVisibleOnly : BoolProperty(
+        name="Export Viewport Visible Only",
+        description="Export objects enabled in the viewport. Either temporarily hidden and/or globally disabled",
+        default=False,
+    )
+    
     useNamesFrom: EnumProperty(
         name = "Use Names From",
         description = "Whether the exporter should use object or mesh names.",
@@ -81,7 +94,7 @@ class ALO_Exporter(bpy.types.Operator, ExportHelper):
             ('MESH', "Mesh", ""),
             ('OBJECT', "Object", ""),
         ),
-        default = 'MESH',
+        default = 'OBJECT',
     )
 
     skeletonEnum : EnumProperty(
@@ -93,12 +106,14 @@ class ALO_Exporter(bpy.types.Operator, ExportHelper):
 
     def draw(self, context):
         layout = self.layout
-        layout.use_property_split = True
+        layout.use_property_split = False
 
-        row = layout.row()
-        row.prop(self, "exportAnimations")
-        row = layout.row()
-        row.prop(self, "exportHiddenObjects")
+        layout.prop(self, "exportAnimations")
+        layout.prop(self, "exportHiddenObjects")
+        layout.prop(self, "exportSelectedOnly")
+        layout.prop(self, "exportVisibleOnly")
+
+        layout.use_property_split = True
 
         row = layout.row(heading="Names From")
         row.use_property_split = False
@@ -562,7 +577,7 @@ class ALO_Exporter(bpy.types.Operator, ExportHelper):
 
             vertices = []
             face_indices = []
-            
+
             vertex_index_map = {}
             
             alo_index = 0
@@ -578,15 +593,15 @@ class ALO_Exporter(bpy.types.Operator, ExportHelper):
                         face_indices.append(vertex_index_map[key])
                     else:
                         vertex_index_map[key] = alo_index            
-                        vertex.uv =  mathutils.Vector((0, 0))
-                        meshVertex = mesh.vertices[vert.index]
-                        vertex.bone_index = getMaxWeightGroupIndex(meshVertex)
-                        if(vertex.bone_index == None):
-                            vertex.bone_index = 0
-                        vertices.append(vertex)
-                        face_indices.append(alo_index)
-                        indexArray[vert.index] = alo_index
-                        alo_index += 1
+                    vertex.uv =  mathutils.Vector((0, 0))
+                    meshVertex = mesh.vertices[vert.index]
+                    vertex.bone_index = getMaxWeightGroupIndex(meshVertex)
+                    if(vertex.bone_index == None):
+                        vertex.bone_index = 0
+                    vertices.append(vertex)
+                    face_indices.append(alo_index)
+                    indexArray[vert.index] = alo_index
+                    alo_index += 1
                 per_face_vertex_id[face.index] = indexArray
 
             for edge in bm.edges:
@@ -600,46 +615,46 @@ class ALO_Exporter(bpy.types.Operator, ExportHelper):
                     f2v1 = per_face_vertex_id[face2.index][edge.verts[0].index]
                     f2v2 = per_face_vertex_id[face2.index][edge.verts[1].index]
 
-                    mid1 = mathutils.Vector((0, 0, 0))
-                    for vert in face1.verts:
-                        mid1 += vert.co
-                    mid1 /= 3
+                mid1 = mathutils.Vector((0, 0, 0))
+                for vert in face1.verts:
+                    mid1 += vert.co
+                mid1 /= 3
 
-                    mid2 = mathutils.Vector((0, 0, 0))
-                    for vert in face2.verts:
-                        mid2 += vert.co
-                    mid2 /= 3
+                mid2 = mathutils.Vector((0, 0, 0))
+                for vert in face2.verts:
+                    mid2 += vert.co
+                mid2 /= 3
 
 
-                    face1v1 = edge.verts[0].co * 0.75 + mid1 * 0.25
-                    face1v2 = edge.verts[1].co * 0.75 + mid1 * 0.25
-                    face2v1 = edge.verts[0].co * 0.75 + mid2 * 0.25
-                    face2v2 = edge.verts[1].co * 0.75 + mid2 * 0.25
+                face1v1 = edge.verts[0].co * 0.75 + mid1 * 0.25
+                face1v2 = edge.verts[1].co * 0.75 + mid1 * 0.25
+                face2v1 = edge.verts[0].co * 0.75 + mid2 * 0.25
+                face2v2 = edge.verts[1].co * 0.75 + mid2 * 0.25
 
-                    out = face1.normal + face2.normal
+                out = face1.normal + face2.normal
 
-                    #first face
-                    edge1 = face1v1 - face2v1
-                    edge2 = face1v2 - face2v1
+                #first face
+                edge1 = face1v1 - face2v1
+                edge2 = face1v2 - face2v1
 
-                    cross = mathutils.Vector.cross(edge1, edge2)
-                    dot = mathutils.Vector.dot(out, cross)
+                cross = mathutils.Vector.cross(edge1, edge2)
+                dot = mathutils.Vector.dot(out, cross)
 
-                    if dot < 0:
+                if dot < 0:
                         # print("dot " + str(dot))
-                        face_indices.append(f1v1)
-                        face_indices.append(f2v1)
-                        face_indices.append(f1v2)
-                        face_indices.append(f2v2)
-                        face_indices.append(f1v2)
-                        face_indices.append(f2v1)
-                    else:
-                        face_indices.append(f1v1)
-                        face_indices.append(f1v2)
-                        face_indices.append(f2v1)
-                        face_indices.append(f2v2)
-                        face_indices.append(f2v1)
-                        face_indices.append(f1v2)
+                    face_indices.append(f1v1)
+                    face_indices.append(f2v1)
+                    face_indices.append(f1v2)
+                    face_indices.append(f2v2)
+                    face_indices.append(f1v2)
+                    face_indices.append(f2v1)
+                else:
+                    face_indices.append(f1v1)
+                    face_indices.append(f1v2)
+                    face_indices.append(f2v1)
+                    face_indices.append(f2v2)
+                    face_indices.append(f2v1)
+                    face_indices.append(f1v2)
 
             return [vertices, face_indices]
 
@@ -1403,6 +1418,14 @@ class ALO_Exporter(bpy.types.Operator, ExportHelper):
 
 
         mesh_list = validation.create_export_list(bpy.context.scene.collection, self.exportHiddenObjects, self.useNamesFrom)
+
+        if self.exportSelectedOnly:
+            selected = set(bpy.context.selected_objects)
+            mesh_list = [obj for obj in mesh_list if obj in selected]
+
+        if self.exportVisibleOnly:
+            mesh_list = [obj for obj in mesh_list if obj.visible_get()]
+
 
         #check if export objects satisfy requirements (has material, UVs, ...)
         messages = validation.validate(mesh_list)
