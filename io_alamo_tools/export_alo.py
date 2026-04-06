@@ -577,7 +577,7 @@ class ALO_Exporter(bpy.types.Operator, ExportHelper):
 
             vertices = []
             face_indices = []
-
+            
             vertex_index_map = {}
             
             alo_index = 0
@@ -593,15 +593,15 @@ class ALO_Exporter(bpy.types.Operator, ExportHelper):
                         face_indices.append(vertex_index_map[key])
                     else:
                         vertex_index_map[key] = alo_index            
-                    vertex.uv =  mathutils.Vector((0, 0))
-                    meshVertex = mesh.vertices[vert.index]
-                    vertex.bone_index = getMaxWeightGroupIndex(meshVertex)
-                    if(vertex.bone_index == None):
-                        vertex.bone_index = 0
-                    vertices.append(vertex)
-                    face_indices.append(alo_index)
-                    indexArray[vert.index] = alo_index
-                    alo_index += 1
+                        vertex.uv =  mathutils.Vector((0, 0))
+                        meshVertex = mesh.vertices[vert.index]
+                        vertex.bone_index = getMaxWeightGroupIndex(meshVertex)
+                        if(vertex.bone_index == None):
+                            vertex.bone_index = 0
+                        vertices.append(vertex)
+                        face_indices.append(alo_index)
+                        indexArray[vert.index] = alo_index
+                        alo_index += 1
                 per_face_vertex_id[face.index] = indexArray
 
             for edge in bm.edges:
@@ -615,46 +615,46 @@ class ALO_Exporter(bpy.types.Operator, ExportHelper):
                     f2v1 = per_face_vertex_id[face2.index][edge.verts[0].index]
                     f2v2 = per_face_vertex_id[face2.index][edge.verts[1].index]
 
-                mid1 = mathutils.Vector((0, 0, 0))
-                for vert in face1.verts:
-                    mid1 += vert.co
-                mid1 /= 3
+                    mid1 = mathutils.Vector((0, 0, 0))
+                    for vert in face1.verts:
+                        mid1 += vert.co
+                    mid1 /= 3
 
-                mid2 = mathutils.Vector((0, 0, 0))
-                for vert in face2.verts:
-                    mid2 += vert.co
-                mid2 /= 3
+                    mid2 = mathutils.Vector((0, 0, 0))
+                    for vert in face2.verts:
+                        mid2 += vert.co
+                    mid2 /= 3
 
 
-                face1v1 = edge.verts[0].co * 0.75 + mid1 * 0.25
-                face1v2 = edge.verts[1].co * 0.75 + mid1 * 0.25
-                face2v1 = edge.verts[0].co * 0.75 + mid2 * 0.25
-                face2v2 = edge.verts[1].co * 0.75 + mid2 * 0.25
+                    face1v1 = edge.verts[0].co * 0.75 + mid1 * 0.25
+                    face1v2 = edge.verts[1].co * 0.75 + mid1 * 0.25
+                    face2v1 = edge.verts[0].co * 0.75 + mid2 * 0.25
+                    face2v2 = edge.verts[1].co * 0.75 + mid2 * 0.25
 
-                out = face1.normal + face2.normal
+                    out = face1.normal + face2.normal
 
-                #first face
-                edge1 = face1v1 - face2v1
-                edge2 = face1v2 - face2v1
+                    #first face
+                    edge1 = face1v1 - face2v1
+                    edge2 = face1v2 - face2v1
 
-                cross = mathutils.Vector.cross(edge1, edge2)
-                dot = mathutils.Vector.dot(out, cross)
+                    cross = mathutils.Vector.cross(edge1, edge2)
+                    dot = mathutils.Vector.dot(out, cross)
 
-                if dot < 0:
+                    if dot < 0:
                         # print("dot " + str(dot))
-                    face_indices.append(f1v1)
-                    face_indices.append(f2v1)
-                    face_indices.append(f1v2)
-                    face_indices.append(f2v2)
-                    face_indices.append(f1v2)
-                    face_indices.append(f2v1)
-                else:
-                    face_indices.append(f1v1)
-                    face_indices.append(f1v2)
-                    face_indices.append(f2v1)
-                    face_indices.append(f2v2)
-                    face_indices.append(f2v1)
-                    face_indices.append(f1v2)
+                        face_indices.append(f1v1)
+                        face_indices.append(f2v1)
+                        face_indices.append(f1v2)
+                        face_indices.append(f2v2)
+                        face_indices.append(f1v2)
+                        face_indices.append(f2v1)
+                    else:
+                        face_indices.append(f1v1)
+                        face_indices.append(f1v2)
+                        face_indices.append(f2v1)
+                        face_indices.append(f2v2)
+                        face_indices.append(f2v1)
+                        face_indices.append(f1v2)
 
             return [vertices, face_indices]
 

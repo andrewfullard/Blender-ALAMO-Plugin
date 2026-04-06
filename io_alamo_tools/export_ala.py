@@ -399,7 +399,7 @@ def create_visibility_chunk(armature, bone):
         if (parts[2] == '].proxyIsHiddenAnimation'):
             if parts[1] == bone.name or (bone.parent is not None and bone.parent.name == parts[1]):
                 dataExists = True
-            break
+                break
 
     if not dataExists:
         return b''
@@ -408,7 +408,7 @@ def create_visibility_chunk(armature, bone):
     binary = ''
 
     pose = armature.pose.bones[bone.name]
-
+    
     parentPose = {}
     if bone.parent is not None:
         parentPose = armature.pose.bones[bone.parent.name]

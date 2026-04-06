@@ -312,7 +312,7 @@ class ALO_Importer(bpy.types.Operator):
                     face.material_index = subMeshCounter
 
             # create UVs
-            createUVLayer("MainUV", UVs)
+            createUVLayer("UVMap", UVs)
             assign_vertex_groups(animationMapping, currentMesh)
 
             return mesh
@@ -582,12 +582,11 @@ class ALO_Importer(bpy.types.Operator):
             return node_group
 
         def set_up_textures(material):
-
             material.use_nodes = True
             nt = material.node_tree
             nodes = nt.nodes
             links = nt.links
-
+            
             # clean up
             while(nodes):
                 nodes.remove(nodes[0])
@@ -643,13 +642,14 @@ class ALO_Importer(bpy.types.Operator):
 
             # TODO: Extract set_alamo_shader's shader finder to new function, use that here.
             material_props = ["BaseTexture", "NormalTexture", "GlossTexture", "WaveTexture", "DistortionTexture", "CloudTexture", "CloudNormalTexture", "Emissive", "Diffuse", "Specular", "Shininess", "Colorization", "DebugColor", "UVOffset", "Color", "UVScrollRate", "DiffuseColor",
-                              "EdgeBrightness", "BaseUVScale", "WaveUVScale", "DistortUVScale", "BaseUVScrollRate", "WaveUVScrollRate", "DistortUVScrollRate", "BendScale", "Diffuse1", "CloudScrollRate", "CloudScale", "SFreq",  "TFreq", "DistortionScale", "Atmosphere", "CityColor", "AtmospherePower"]
+                              "EdgeBrightness", "BaseUVScale", "WaveUVScale", "DistortUVScale", "BaseUVScrollRate", "WaveUVScrollRate", "DistortUVScrollRate", "BendScale", "Diffuse1", "CloudScrollRate", "CloudScale", "SFreq",  "TFreq", "DistortionScale", "Atmosphere", "CityColor", "AtmospherePower", "SpecularTexture"]
 
             for texture in material_props:
                 if texture in oldMat:
                     mat[texture] = oldMat[texture]
 
             obj = bpy.context.object
+
             obj.data.materials.clear()
             obj.data.materials.append(mat)
             currentSubMesh.material = mat
@@ -673,6 +673,7 @@ class ALO_Importer(bpy.types.Operator):
                 return bpy.data.materials.get(name)
             else:
                 return bpy.data.materials.new(name)
+
 
         def create_object(currentMesh):
             global mesh
@@ -937,7 +938,7 @@ class ALO_Importer(bpy.types.Operator):
                 counter += 1
             file.seek(1, 1)  # skip end byte of name
             return string
-
+        
         def hideObject(object):
 
             # set correct area type via context overwrite
@@ -1036,8 +1037,9 @@ class ALO_Importer(bpy.types.Operator):
                     return
 
         def validate_material_prop(name):
-            material_props = ["BaseTexture", "NormalTexture", "GlossTexture", "WaveTexture", "DistortionTexture", "CloudTexture", "CloudNormalTexture", "Emissive", "Diffuse", "Specular", "Shininess", "Colorization", "DebugColor", "UVOffset", "Color", "UVScrollRate", "DiffuseColor",
-                              "EdgeBrightness", "BaseUVScale", "WaveUVScale", "DistortUVScale", "BaseUVScrollRate", "WaveUVScrollRate", "DistortUVScrollRate", "BendScale", "Diffuse1", "CloudScrollRate", "CloudScale", "SFreq",  "TFreq", "DistortionScale", "Atmosphere", "CityColor", "AtmospherePower"]
+            material_props = ["BaseTexture", "NormalTexture", "GlossTexture", "WaveTexture", "DistortionTexture", "CloudTexture", "CloudNormalTexture", "Emissive", "Diffuse", "Specular", "Shininess", "Colorization" \
+                , "DebugColor", "UVOffset", "Color", "UVScrollRate", "DiffuseColor", "EdgeBrightness", "BaseUVScale", "WaveUVScale", "DistortUVScale", "BaseUVScrollRate", "WaveUVScrollRate", "DistortUVScrollRate", "BendScale" \
+                , "Diffuse1", "CloudScrollRate", "CloudScale", "SFreq", "TFreq", "DistortionScale", "Atmosphere", "CityColor", "AtmospherePower", "SpecularTexture"]
 
             if(name in material_props):
                 return True
@@ -1166,9 +1168,10 @@ class ALO_Importer(bpy.types.Operator):
                     createdArmature.parent = armature
                     createdArmature.parent_bone = self.parentName
                     createdArmature.parent_type = 'BONE'
-
-        # this lets blender know the operator finished successfully.
-        return {'FINISHED'}
+        for object in bpy.data.objects:
+            for constraint in object.constraints:
+                constraint.inverse_matrix = mathutils.Matrix.Identity(4)
+        return {'FINISHED'}            # this lets blender know the operator finished successfully.
 
     def invoke(self, context, event):
         context.window_manager.fileselect_add(self)
