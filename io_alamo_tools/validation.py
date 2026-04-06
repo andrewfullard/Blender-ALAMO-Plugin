@@ -27,6 +27,8 @@ def selectNonManifoldVertices(object):
     object.hide_set(False)
     bpy.context.view_layer.objects.active = object
     bpy.ops.object.mode_set(mode='EDIT')
+    # select_non_manifold only works in VERT or EDGE mode, default to VERT
+    bpy.ops.mesh.select_mode(type="VERT")
     bpy.ops.mesh.select_all(action='DESELECT')
     bpy.ops.mesh.select_non_manifold()
 
@@ -44,15 +46,37 @@ def checkShadowMesh(object):
             bm.verts.ensure_lookup_table()
 
             for vertex in bm.verts:
+                if len(vertex.link_edges) == 0:
+                    selectNonManifoldVertices(object)
+                    error += [({'ERROR'}, f'ALAMO - Loose vertex in shadow mesh: {object.name}')]
+                    break
+
+            for vertex in bm.verts:
                 if not vertex.is_manifold:
-                    # bm.free()
                     selectNonManifoldVertices(object)
                     error += [({'ERROR'}, f'ALAMO - Non manifold geometry shadow mesh: {object.name}')]
                     break
+            
+            for edge in bm.edges:
+                if len(edge.link_faces) == 0:
+                    selectNonManifoldVertices(object)
+                    error += [({'ERROR'}, f'ALAMO - Loose edge in shadow mesh: {object.name}')]
+                    break
 
             for edge in bm.edges:
-                if len(edge.link_faces) < 2:
-                    # bm.free()
+                if len(edge.link_faces) == 1:
+                    selectNonManifoldVertices(object)
+                    error += [({'ERROR'}, f'ALAMO - Hole in shadow mesh: {object.name}')]
+                    break
+
+            for edge in bm.edges:
+                if len(edge.link_faces) > 2:
+                    selectNonManifoldVertices(object)
+                    error += [({'ERROR'}, f'ALAMO - Edge should only have 2 faces connected: {object.name}')]
+                    break
+
+            for edge in bm.edges:
+                if not edge.is_manifold:
                     selectNonManifoldVertices(object)
                     error += [({'ERROR'}, f'ALAMO - Non manifold geometry shadow mesh: {object.name}')]
                     break
@@ -62,6 +86,39 @@ def checkShadowMesh(object):
         error += [({'ERROR'}, f'ALAMO - Missing material on object: {object.name}')]
 
     return error
+
+def checkCollisionShader(object):
+    error = []
+
+    if object.type != 'MESH':
+        return error
+
+    uses_collision_shader = False
+
+    for mat in object.data.materials:
+        if (
+            mat
+            and hasattr(mat, "shaderList")
+            and mat.shaderList.shaderList == "MeshCollision.fx"
+        ):
+            uses_collision_shader = True
+            break
+
+    if uses_collision_shader:
+        if not object.HasCollision:
+            object.HasCollision = True
+            error.append(
+                ({'WARNING'}, f'ALAMO - {object.name} uses MeshCollision.fx; HasCollision was enabled automatically')
+            )
+
+        if not object.Hidden:
+            object.Hidden = True
+            error.append(
+                ({'WARNING'}, f'ALAMO - {object.name} uses MeshCollision.fx; Hidden was enabled automatically')
+            )
+
+    return error
+
 
 def checkUV(object):  # throws error if object lacks UVs
     error = []
@@ -122,6 +179,25 @@ def checkScale(object):  # prints warning when scale is not default
         return [({'ERROR'}, f'ALAMO - {object.name} has non-identity scale. Apply scale.')]
     return []
 
+def checkLooseVertsEdges(object):
+    bm = bmesh.new()  # create an empty BMesh
+    bm.from_mesh(object.data)  # fill it in from a Mesh
+    bm.verts.ensure_lookup_table()
+    errors = []
+
+    for vertex in bm.verts:
+        if len(vertex.link_edges) == 0:
+            errors.append(({'ERROR'}, f'ALAMO - {object.name} has loose vertices.'))
+            break  # optional: stop after first detection
+
+    for edge in bm.edges:
+        if len(edge.link_faces) == 0:
+            errors.append(({'ERROR'}, f'ALAMO - {object.name} has loose edges.'))
+            break
+
+    bm.free()
+    return errors
+
 def selectBadVertexGroups(object, bad_verts):
     """Selects vertices by index in EDIT mode."""
     if bpy.context.mode != 'OBJECT':
@@ -142,11 +218,35 @@ def selectBadVertexGroups(object, bad_verts):
 
 
 def checkVertexGroups(object):
-    if object.vertex_groups is None or len(object.vertex_groups) == 0:
+    required_shaders = {
+        'RSkinAdditive.fx',
+        'RSkinAlpha.fx',
+        'RSkinBumpColorize.fx',
+        'RSkinGloss.fx',
+        'RSkinGlossColorize.fx',
+        'RSkinShadowVolume.fx'
+    }
+
+    shaders_in_object = set()
+    if object.material_slots:
+        for slot in object.material_slots:
+            mat = slot.material
+            if mat and hasattr(mat, "shaderList") and hasattr(mat.shaderList, "shaderList"):
+                shaders_in_object.add(mat.shaderList.shaderList)
+
+    if not (shaders_in_object & required_shaders):
         return []
 
     errors = []
     bad_verts = set()
+
+    if not object.vertex_groups or len(object.vertex_groups) == 0:
+        errors.append(
+            ({'ERROR'},
+             f'ALAMO - Object "{object.name}" uses skin shader(s) '
+             f'but has no vertex groups')
+        )
+        return errors
 
     armature = utils.findArmature()
     valid_bones = set()
@@ -209,6 +309,7 @@ def checkVertexGroups(object):
 
     return errors
 
+
 def checkNumBones(object):
     if type(object) != type(None) and object.type == 'MESH':
         material = object.active_material
@@ -260,12 +361,14 @@ def validate(mesh_list):
     errors = []
     checklist = [
         checkShadowMesh,
+        checkCollisionShader,
         checkUV,
         checkFaceNumber,
         checkAutosmooth,
         checkTranslation,
         checkInvalidArmatureModifier,
         checkScale,
+        checkLooseVertsEdges,
         checkVertexGroups,
         checkNumBones,
     ]

@@ -68,12 +68,25 @@ class ALO_Exporter(bpy.types.Operator, ExportHelper):
             description="Export all animation actions as .ALA files, into the same directory",
             default=True,
             )
+
     exportHiddenObjects : BoolProperty(
-            name="Export Hidden Objects",
-            description="Export all objects, regardless of if they are hidden",
+            name="Export Set Hidden Objects",
+            description="Export all objects with Set Hidden to true in alamo properties",
             default=True,
             )
+    
+    exportSelectedOnly : BoolProperty(
+        name="Export Selected Only",
+        description="Export only selected objects",
+        default=False,
+    )
 
+    exportVisibleOnly : BoolProperty(
+        name="Export Viewport Visible Only",
+        description="Export objects enabled in the viewport. Either temporarily hidden and/or globally disabled",
+        default=False,
+    )
+    
     useNamesFrom: EnumProperty(
         name = "Use Names From",
         description = "Whether the exporter should use object or mesh names.",
@@ -81,7 +94,7 @@ class ALO_Exporter(bpy.types.Operator, ExportHelper):
             ('MESH', "Mesh", ""),
             ('OBJECT', "Object", ""),
         ),
-        default = 'MESH',
+        default = 'OBJECT',
     )
 
     skeletonEnum : EnumProperty(
@@ -93,12 +106,14 @@ class ALO_Exporter(bpy.types.Operator, ExportHelper):
 
     def draw(self, context):
         layout = self.layout
-        layout.use_property_split = True
+        layout.use_property_split = False
 
-        row = layout.row()
-        row.prop(self, "exportAnimations")
-        row = layout.row()
-        row.prop(self, "exportHiddenObjects")
+        layout.prop(self, "exportAnimations")
+        layout.prop(self, "exportHiddenObjects")
+        layout.prop(self, "exportSelectedOnly")
+        layout.prop(self, "exportVisibleOnly")
+
+        layout.use_property_split = True
 
         row = layout.row(heading="Names From")
         row.use_property_split = False
@@ -1403,6 +1418,14 @@ class ALO_Exporter(bpy.types.Operator, ExportHelper):
 
 
         mesh_list = validation.create_export_list(bpy.context.scene.collection, self.exportHiddenObjects, self.useNamesFrom)
+
+        if self.exportSelectedOnly:
+            selected = set(bpy.context.selected_objects)
+            mesh_list = [obj for obj in mesh_list if obj in selected]
+
+        if self.exportVisibleOnly:
+            mesh_list = [obj for obj in mesh_list if obj.visible_get()]
+
 
         #check if export objects satisfy requirements (has material, UVs, ...)
         messages = validation.validate(mesh_list)

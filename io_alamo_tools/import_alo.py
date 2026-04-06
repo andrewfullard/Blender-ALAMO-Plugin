@@ -654,6 +654,20 @@ class ALO_Importer(bpy.types.Operator):
             obj.data.materials.append(mat)
             currentSubMesh.material = mat
 
+            if mat.shaderList.shaderList in (
+                'RSkinAdditive.fx',
+                'RSkinAlpha.fx',
+                'RSkinBumpColorize.fx',
+                'RSkinGloss.fx',
+                'RSkinGlossColorize.fx',
+                'RSkinShadowVolume.fx'
+            ):
+                armature = utils.findArmature()
+                if armature:
+                    for bone in armature.data.bones:
+                        if bone.name not in [vg.name for vg in obj.vertex_groups]:
+                            obj.vertex_groups.new(name=bone.name)
+
         def assign_material(name):
             if name in bpy.data.materials:
                 return bpy.data.materials.get(name)
@@ -681,11 +695,6 @@ class ALO_Importer(bpy.types.Operator):
 
             if (currentMesh.collision == 1):
                 object.HasCollision = True
-
-            # create vertex groups
-            armature = utils.findArmature()
-            for bone in armature.data.bones:
-                vertgroup = object.vertex_groups.new(name=bone.name)
 
         def process_vertex_buffer_2(legacy, currentSubMesh):
             f = struct.Struct('f')  # unpack as float
@@ -765,8 +774,10 @@ class ALO_Importer(bpy.types.Operator):
 
             if shaderName == 'MeshCollision.fx':
                 mat = assign_material("COLLISION")
-            elif shaderName in ['RSkinShadowVolume.fx', 'MeshShadowVolume.fx']:
+            elif shaderName == 'MeshShadowVolume.fx':
                 mat = assign_material("SHADOW")
+            elif shaderName == ['RSkinShadowVolume.fx']:
+                mat = assign_material("SKINSHADOW")
             else:
                 mat = assign_material("DUMMYMATERIAL")
                 # DUMMYMATERIAL is a temporary material to allow Alamo shader properties to be assigned.
@@ -790,8 +801,7 @@ class ALO_Importer(bpy.types.Operator):
             currentSubMesh.material = mat
 
         def assign_vertex_groups(animation_mapping, currentMesh):
-            # assign vertex groups
-            object = bpy.context.view_layer.objects.active
+            obj = bpy.context.view_layer.objects.active
             counter = 0
             armatureObject = utils.findArmature()
             n_vertices = currentMesh.getNVerts()
@@ -800,16 +810,16 @@ class ALO_Importer(bpy.types.Operator):
             for subMesh in currentMesh.subMeshList:
                 bone_indices += subMesh.boneIndex
 
-            if(len(animation_mapping) != 0):
-                # add armature modifier
-                mod = object.modifiers.new('MyRigModif', 'ARMATURE')
+            if (len(animation_mapping) != 0 and len(obj.vertex_groups) > 0):
+                mod = obj.modifiers.new('MyRigModif', 'ARMATURE')
                 mod.object = armatureObject
                 mod.use_bone_envelopes = False
                 mod.use_vertex_groups = True
 
                 while counter < n_vertices:
-                    object.vertex_groups[animation_mapping[bone_indices[counter]]].add([
-                                                                                       counter], 1, 'ADD')
+                    group_index = animation_mapping[bone_indices[counter]]
+                    if group_index < len(obj.vertex_groups):
+                        obj.vertex_groups[group_index].add([counter], 1, 'ADD')
                     counter += 1
 
         # proxy and connection functions
