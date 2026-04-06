@@ -504,15 +504,15 @@ class ALO_Importer(bpy.types.Operator):
 
             group_in = node('NodeGroupInput')
             group_in.location.x -= 700
-            node_group.inputs.new('NodeSocketColor', 'Team Color')
-            spec = node_group.inputs.new(
-                'NodeSocketFloat', 'Specular Intensity')
+            node_group.interface.new_socket('Team Color', in_out='INPUT', socket_type='NodeSocketColor')
+            spec = node_group.interface.new_socket(
+                 'Specular Intensity', in_out='INPUT', socket_type='NodeSocketFloat')
             spec.default_value = 0.1
 
             group_out = node('NodeGroupOutput')
-            node_group.outputs.new('NodeSocketColor', 'Base Color')
-            node_group.outputs.new('NodeSocketFloat', 'Specular')
-            node_group.outputs.new('NodeSocketVector', 'Normal')
+            node_group.interface.new_socket('Base Color', in_out='OUTPUT', socket_type='NodeSocketColor')
+            node_group.interface.new_socket('Specular', in_out='OUTPUT', socket_type='NodeSocketFloat')
+            node_group.interface.new_socket('Normal', in_out='OUTPUT', socket_type='NodeSocketVector')
 
             base_image_node = node("ShaderNodeTexImage")
             base_image_node.location.x -= 500
@@ -577,7 +577,7 @@ class ALO_Importer(bpy.types.Operator):
                 normal_texture = bpy.data.images[material.NormalTexture]
                 normal_texture.alpha_mode = 'CHANNEL_PACKED'
                 normal_image_node.image = normal_texture
-                normal_image_node.image.colorspace_settings.name = 'Raw'
+                #normal_image_node.image.colorspace_settings.name = 'Raw'
 
             return node_group
 
@@ -941,8 +941,7 @@ class ALO_Importer(bpy.types.Operator):
         
         def hideObject(object):
 
-            # set correct area type via context overwrite
-            context_override = bpy.context.copy()
+            # set correct area type via temp context override
             area = None
             for window in bpy.context.window_manager.windows:
                 screen = window.screen
@@ -951,12 +950,11 @@ class ALO_Importer(bpy.types.Operator):
                         area = a
                         break
 
-            context_override['area'] = area
-
-            bpy.ops.object.select_all(context_override, action='DESELECT')
-            object.select_set(True)
-            bpy.ops.object.hide_view_set(context_override)
-            object.hide_render = True
+            with context.temp_override(area=area):
+                bpy.ops.object.select_all(action='DESELECT')
+                object.select_set(True)
+                bpy.ops.object.hide_view_set()
+                object.hide_render = True
 
         def hideLODs():
             # hides all but the most detailed LOD in Blender

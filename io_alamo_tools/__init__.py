@@ -10,8 +10,8 @@ from . import export_ala
 bl_info = {
     "name": "ALAMO Tools",
     "author": "Gaukler, evilbobthebob, inertial, 1138, rhin0",
-    "version": (0, 0, 3, 5),
-    "blender": (2, 93, 0),
+    "version": (0, 0, 4, 2),
+    "blender": (4, 2, 0),
     "category": "Import-Export",
 }
 
