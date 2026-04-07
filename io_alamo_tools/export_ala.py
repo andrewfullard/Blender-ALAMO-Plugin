@@ -19,6 +19,7 @@ from math import pi
 from mathutils import Vector
 from bpy.props import *
 from bpy_extras.io_utils import ExportHelper, ImportHelper
+from bpy_extras import anim_utils
 import sys
 import os
 import bmesh
@@ -202,13 +203,18 @@ def create_animation():
     rotationList = []
     translationList = []
 
-    if armature.animation_data == None:
+    anim_data = armature.animation_data
+
+    if anim_data == None:
         return b''
+    
+    # v5.x animation system, get channel bag for action slot
+    channelbag = anim_utils.action_get_channelbag_for_slot(anim_data.action, anim_data.action_slot)
 
     # iterate over every pose bone
     for pose in armature.pose.bones:
         # iterate over every fcurves data (keyframes)
-        for curve in armature.animation_data.action.fcurves:
+        for curve in channelbag.fcurves:
             # by spliting and comparing the data path we know which bone has rotation/location keyframes
             if curve.data_path.split('"')[1] == pose.name and curve.data_path.split('"')[2] == '].location':
                 if (not (pose.name in translationList)): translationList.append(pose.name)  # if list doesnt contaion bone name add it
@@ -250,10 +256,14 @@ def create_anim_info_chunk(armature):
     # calculate location and rotation block sizes
     # iterate over every pose bone
     for pose in armature.pose.bones:  # iterate over every bone
-        if armature.animation_data == None:
+        anim_data = armature.animation_data
+        if anim_data == None:
             raise RuntimeError('Warning: no animation data found')
+        
+        # v5.x animation system, get channel bag for action slot
+        channelbag = anim_utils.action_get_channelbag_for_slot(anim_data.action, anim_data.action_slot)
         # iterate over every fcurves data (keyframes)
-        for curve in armature.animation_data.action.fcurves:
+        for curve in channelbag.fcurves:
             # by spliting and comparing the data path we know which bone has rotation/location keyframes
             if curve.data_path.split('"')[1] == pose.name and curve.data_path.split('"')[2] == '].location':
                 locationTracks += 1
@@ -393,7 +403,8 @@ def create_bone_animation_info_chunk(bone, translationList, rotationList, armatu
 
 def create_visibility_chunk(armature, bone):
     dataExists = False
-    for curve in armature.animation_data.action.fcurves:
+    channelbag = anim_utils.action_get_channelbag_for_slot(armature.animation_data.action, armature.animation_data.action_slot)
+    for curve in channelbag.fcurves:
         # by spliting and comparing the data path we know which bone has rotation/location keyframes
         parts = curve.data_path.split('"')
         if (parts[2] == '].proxyIsHiddenAnimation'):
