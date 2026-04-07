@@ -448,7 +448,7 @@ class ALO_Importer(bpy.types.Operator):
 
             group_out = node('NodeGroupOutput')
             group_out.location.x += 200.0
-            node_group.outputs.new('NodeSocketShader', 'Surface')
+            node_group.interface.new_socket('Surface', socket_type='NodeSocketShader', in_out='OUTPUT')
 
             mix_shader = node("ShaderNodeMixShader")
 
@@ -462,8 +462,8 @@ class ALO_Importer(bpy.types.Operator):
             if is_emissive:
                 group_in = node('NodeGroupInput')
                 group_in.location.x -= 700
-                emissive = node_group.inputs.new(
-                    'NodeSocketFloat', 'Emissive Strength')
+                emissive = node_group.interface.new_socket(
+                    'Emissive Strength', socket_type='NodeSocketFloat', in_out='INPUT')
                 emissive.default_value = 1.0
                 color = node("ShaderNodeEmission")
                 link(group_in.outputs[0], color.inputs[1])
@@ -529,7 +529,7 @@ class ALO_Importer(bpy.types.Operator):
             normal_image_node.location.x -= 1100.0
             normal_image_node.location.y -= 300.0
 
-            normal_split = node("ShaderNodeSeparateRGB")
+            normal_split = node("ShaderNodeSeparateColor")
             normal_split.location.x -= 800
             normal_split.location.y -= 300
             normal_invert = node("ShaderNodeMath")
@@ -537,7 +537,7 @@ class ALO_Importer(bpy.types.Operator):
             normal_invert.inputs[0].default_value = 1
             normal_invert.location.x -= 600
             normal_invert.location.y -= 300
-            normal_combine = node("ShaderNodeCombineRGB")
+            normal_combine = node("ShaderNodeCombineColor")
             normal_combine.location.x -= 400
             normal_combine.location.y -= 300
 
@@ -552,11 +552,11 @@ class ALO_Importer(bpy.types.Operator):
             specular_multiply.location.y -= 100
 
             link(normal_image_node.outputs['Color'],
-                 normal_split.inputs['Image'])
-            link(normal_split.outputs['R'], normal_combine.inputs['R'])
-            link(normal_split.outputs['G'], normal_invert.inputs[1])
-            link(normal_invert.outputs[0], normal_combine.inputs['G'])
-            link(normal_split.outputs['B'], normal_combine.inputs['B'])
+                 normal_split.inputs['Color'])
+            link(normal_split.outputs['Red'], normal_combine.inputs['Red'])
+            link(normal_split.outputs['Green'], normal_invert.inputs[1])
+            link(normal_invert.outputs[0], normal_combine.inputs['Green'])
+            link(normal_split.outputs['Blue'], normal_combine.inputs['Blue'])
             link(normal_combine.outputs[0], normal_map_node.inputs[1])
             link(normal_map_node.outputs[0], group_out.inputs[2])
 
@@ -613,8 +613,8 @@ class ALO_Importer(bpy.types.Operator):
                 links.new(mat_group.outputs[0], output.inputs['Surface'])
             else:
                 bsdf = nodes.new("ShaderNodeBsdfPrincipled")
-                bsdf.inputs[4].default_value = 0.1  # Set metallic to 0.1
-                bsdf.inputs[7].default_value = 0.2  # Set roughness to 0.2
+                bsdf.inputs['Metallic'].default_value = 0.1  # Set metallic to 0.1
+                bsdf.inputs['Roughness'].default_value = 0.2  # Set roughness to 0.2
                 bsdf.location.x -= 300.0
                 links.new(bsdf.outputs['BSDF'], output.inputs['Surface'])
                 my_group = material_group_basic(
@@ -623,7 +623,7 @@ class ALO_Importer(bpy.types.Operator):
                 mat_group.node_tree = bpy.data.node_groups[my_group.name]
                 mat_group.location.x -= 500.0
                 links.new(mat_group.outputs[0], bsdf.inputs['Base Color'])
-                links.new(mat_group.outputs[1], bsdf.inputs[5])
+                links.new(mat_group.outputs[1], bsdf.inputs['Specular IOR Level'])
                 links.new(mat_group.outputs[2], bsdf.inputs['Normal'])
 
         def create_material(currentSubMesh):

@@ -5,7 +5,7 @@ Specifically designed to work with Empire at War: Forces of Corruption.
 
 ## Getting Started
 
-Tested with Blender 4.1. Download the repository. Use the Blender addon installation option and point to the zip of the repository.
+Tested with Blender 4.5. Download the repository. Use the Blender addon installation option and point to the zip of the repository.
 The plugin has to be enabled in Blender. See the official [documentation](https://docs.blender.org/manual/en/latest/editors/preferences/addons.html).  
 If everything worked the Import and Export menus now list options for .ALO and .ALA files.  
 
