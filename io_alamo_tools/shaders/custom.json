@@ -1,0 +1,34 @@
+{
+    "MeshGlow.fx": {
+        "vertexType": "alD3dVertNU2",
+        "materialParameter": [
+            "BaseTexture",
+            "DistortionScale"
+        ]
+    },
+    "MeshAdditiveScalar.fx": {
+        "vertexType": "alD3dVertNU2",
+        "materialParameter": [
+            "BaseTexture",
+            "UVScrollRate",
+            "Color",
+            "DistortionScale"
+        ]
+    },
+    "MeshBumpColorizeTile.fx": {
+        "vertexType": "alD3dVertNU2U3U3",
+        "hasBump" : true,
+        "materialParameter": [
+            "Emissive",
+            "Diffuse",
+            "Specular",
+            "Colorization",
+            "UVOffsetX",
+            "UVOffsetY",
+            "UVScaleFactor",
+            "BaseTexture",
+            "NormalTexture",
+            "MaskTexture"
+        ]
+    }
+}

@@ -1,0 +1,42 @@
+{
+    "BaseTexture" : {
+        "propertyType" : "StringProperty",
+        "default" : "None"
+    },
+    "NormalTexture" : {
+        "propertyType" : "StringProperty",
+        "default" : "None"
+    },
+    "DetailTexture" : {
+        "propertyType" : "StringProperty",
+        "default" : "None"
+    },
+    "NormalDetailTexture" : {
+        "propertyType" : "StringProperty",
+        "default" : "None"
+    },
+    "GlossTexture" : {
+        "propertyType" : "StringProperty",
+        "default" : "None"
+    },
+    "SpecularTexture" : {
+        "propertyType" : "StringProperty",
+        "default" : "None"
+    },
+    "WaveTexture" : {
+        "propertyType" : "StringProperty",
+        "default" : "None"
+    },
+    "DistortionTexture" : {
+        "propertyType" : "StringProperty",
+        "default" : "None"
+    },
+    "CloudTexture" : {
+        "propertyType" : "StringProperty",
+        "default" : "None"
+    },
+    "CloudNormalTexture" : {
+        "propertyType" : "StringProperty",
+        "default" : "None"
+    }
+}

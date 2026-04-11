@@ -1,5 +1,7 @@
 import bpy
 from . import settings
+import os
+import json
 
 
 class ALAMO_PT_materialPropertyPanel(bpy.types.Panel):
@@ -62,19 +64,22 @@ class ALAMO_PT_materialPropertySubPanel(bpy.types.Panel):
                     if shader_prop.find("Texture") == -1:
                         col.prop(material, shader_prop)
 
-
-class shaderListProperties(bpy.types.PropertyGroup):
-    mode_options = [
-        (shader_name, shader_name, "", "", index)
-        for index, shader_name in enumerate(settings.material_parameter_dict)
+def get_shader_enum(self, context):
+    return [
+        (name, name, "", "", i)
+        for i, name in enumerate(settings.material_parameter_dict.keys())
     ]
 
-    shaderList: bpy.props.EnumProperty(
-        items=mode_options,
-        description="Choose ingame Shader",
-        default="alDefault.fx",
-    )
+def get_default_shader_index():
+    keys = list(settings.material_parameter_dict.keys())
+    return keys.index("alDefault.fx")
 
+class shaderListProperties(bpy.types.PropertyGroup):
+    shaderList: bpy.props.EnumProperty(
+        items=get_shader_enum, # This lets the dicionaries populate before building UI stuff
+        description="Choose ingame Shader",
+        default=get_default_shader_index(),
+    )
 
 # Registration ####################################################################################
 classes = (
@@ -83,188 +88,66 @@ classes = (
     ALAMO_PT_materialPropertySubPanel,
 )
 
+def load_json():
+    addon_dir = os.path.dirname(__file__)
+    shaders_dir = os.path.join(addon_dir, 'materials')
+
+    data = {}
+    for filename in os.listdir(shaders_dir):
+        if filename.lower().endswith(".json"):
+            path = os.path.join(shaders_dir, filename)
+            try:
+                with open(path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    parse_json(data)
+
+            except json.JSONDecodeError as e:
+                print(f"Error parsing JSON: {e}")
+
+def parse_json(data):
+    for name in data:
+
+        match data[name].get("propertyType"):
+            case "StringProperty":
+                setattr(
+                    bpy.types.Material,
+                    name,
+                    bpy.props.StringProperty(default="None"))
+            case "FloatProperty":
+                setattr(
+                    bpy.types.Material,
+                    name,
+                    bpy.props.FloatProperty(
+                        min = data[name].get("min"),
+                        max = data[name].get("max"),
+                        default = data[name].get("default")))
+            case "FloatVectorProperty":
+                setattr(
+                    bpy.types.Material,
+                    name,
+                    bpy.props.FloatVectorProperty(
+                        min = data[name].get("min"),
+                        max = data[name].get("max"),
+                        size = data[name].get("size"),
+                        default = tuple(data[name].get("default"))))
+            case _:
+                return
+        settings.material_parameter_list.append(name)
 
 def register():
     for cls in classes:
         bpy.utils.register_class(cls)
 
-    bpy.types.Material.BaseTexture = bpy.props.StringProperty(default="None")
-    bpy.types.Material.DetailTexture = bpy.props.StringProperty(default="None")
-    bpy.types.Material.NormalDetailTexture = bpy.props.StringProperty(default="None")
-    bpy.types.Material.NormalTexture = bpy.props.StringProperty(default="None")
-    bpy.types.Material.GlossTexture = bpy.props.StringProperty(default="None")
-    bpy.types.Material.SpecularTexture = bpy.props.StringProperty(default="None")
-    bpy.types.Material.WaveTexture = bpy.props.StringProperty(default="None")
-    bpy.types.Material.DistortionTexture = bpy.props.StringProperty(default="None")
-    bpy.types.Material.CloudTexture = bpy.props.StringProperty(default="None")
-    bpy.types.Material.CloudNormalTexture = bpy.props.StringProperty(default="None")
-
     bpy.types.Material.shaderList = bpy.props.PointerProperty(type=shaderListProperties)
-    bpy.types.Material.Emissive = bpy.props.FloatVectorProperty(
-        min=0.0, max=1.0, size=4, default=(0.0, 0.0, 0.0, 0.0)
-    )
-    bpy.types.Material.Diffuse = bpy.props.FloatVectorProperty(
-        min=0.0, max=1.0, size=4, default=(1.0, 1.0, 1.0, 0.0)
-    )
-    bpy.types.Material.Specular = bpy.props.FloatVectorProperty(
-        min=0.0, max=1.0, size=4, default=(1.0, 1.0, 1.0, 0.0)
-    )
-    bpy.types.Material.Shininess = bpy.props.FloatProperty(
-        min=0.0, max=255.0, default=32.0
-    )
-    bpy.types.Material.Colorization = bpy.props.FloatVectorProperty(
-        min=0.0, max=1.0, size=4, default=(1.0, 1.0, 1.0, 0.0)
-    )
-    bpy.types.Material.DebugColor = bpy.props.FloatVectorProperty(
-        min=0.0, max=1.0, size=4, default=(0.0, 1.0, 0.0, 0.0)
-    )
-    bpy.types.Material.UVOffset = bpy.props.FloatVectorProperty(
-        min=0.0, max=1.0, size=4, default=(0.0, 0.0, 0.0, 0.0)
-    )
-    bpy.types.Material.Color = bpy.props.FloatVectorProperty(
-        min=0.0, max=1.0, size=4, default=(1.0, 1.0, 1.0, 1.0)
-    )
-    bpy.types.Material.UVScrollRate = bpy.props.FloatVectorProperty(
-        min=0.0, max=1.0, size=4, default=(0.0, 0.0, 0.0, 0.0)
-    )
-    bpy.types.Material.DiffuseColor = bpy.props.FloatVectorProperty(
-        min=0.0, max=1.0, size=3, default=(0.5, 0.5, 0.5)
-    )
-    # shield shader properties
-    bpy.types.Material.EdgeBrightness = bpy.props.FloatProperty(
-        min=0.0, max=255.0, default=0.5
-    )
-    bpy.types.Material.BaseUVScale = bpy.props.FloatProperty(
-        min=-255.0, max=255.0, default=1.0
-    )
-    bpy.types.Material.WaveUVScale = bpy.props.FloatProperty(
-        min=-255.0, max=255.0, default=1.0
-    )
-    bpy.types.Material.DistortUVScale = bpy.props.FloatProperty(
-        min=-255.0, max=255.0, default=1.0
-    )
-    bpy.types.Material.BaseUVScrollRate = bpy.props.FloatProperty(
-        min=-255.0, max=255.0, default=-0.15
-    )
-    bpy.types.Material.WaveUVScrollRate = bpy.props.FloatProperty(
-        min=-255.0, max=255.0, default=-0.15
-    )
-    bpy.types.Material.DistortUVScrollRate = bpy.props.FloatProperty(
-        min=-255.0, max=255.0, default=-0.25
-    )
-    # tree properties
-    bpy.types.Material.BendScale = bpy.props.FloatProperty(
-        min=-255.0, max=255.0, default=0.4
-    )
-    # grass properties
-    bpy.types.Material.Diffuse1 = bpy.props.FloatVectorProperty(
-        min=0.0, max=1.0, size=4, default=(1.0, 1.0, 1.0, 1.0)
-    )
-    # skydome.fx properties
-    bpy.types.Material.CloudScrollRate = bpy.props.FloatProperty(
-        min=-255.0, max=255.0, default=0.001
-    )
-    bpy.types.Material.CloudScale = bpy.props.FloatProperty(
-        min=-255.0, max=255.0, default=1.0
-    )
-    # nebula.fx properties
-    bpy.types.Material.SFreq = bpy.props.FloatProperty(
-        min=-255.0, max=255.0, default=0.002
-    )
-    bpy.types.Material.TFreq = bpy.props.FloatProperty(
-        min=-255.0, max=255.0, default=0.005
-    )
-    bpy.types.Material.DistortionScale = bpy.props.FloatProperty(
-        min=-255.0, max=255.0, default=1.0
-    )
-    # planet.fx properties
-    bpy.types.Material.Atmosphere = bpy.props.FloatVectorProperty(
-        min=0.0, max=1.0, size=4, default=(0.5, 0.5, 0.5, 0.5)
-    )
-    bpy.types.Material.CityColor = bpy.props.FloatVectorProperty(
-        min=0.0, max=1.0, size=4, default=(0.5, 0.5, 0.5, 0.5)
-    )
-    bpy.types.Material.AtmospherePower = bpy.props.FloatProperty(
-        min=-255.0, max=255.0, default=1.0
-    )
-    # tryplanar mapping properties
-    bpy.types.Material.MappingScale = bpy.props.FloatProperty(
-        min=0.0, max=255.0, default=0.1
-    )
-    bpy.types.Material.BlendSharpness = bpy.props.FloatProperty(
-        min=0.0, max=255.0, default=0.1
-    )
-    # Custom material parameters
-    bpy.types.Material.UVOffsetX = bpy.props.FloatProperty(
-        min=-255.0, max=255.0, default=0.0
-    )
-    bpy.types.Material.UVOffsetY = bpy.props.FloatProperty(
-        min=-255.0, max=255.0, default=0.0
-    )
-    bpy.types.Material.UVScaleFactor = bpy.props.FloatProperty(
-        min=0.1, max=255.0, default=1.0
-    )
-    bpy.types.Material.MaskTexture = bpy.props.StringProperty(default="None")
-
+    load_json()
 
 def unregister():
     for cls in reversed(classes):
         bpy.utils.unregister_class(cls)
 
-    bpy.types.Material.BaseTexture
-    bpy.types.Material.DetailTexture
-    bpy.types.Material.NormalTexture
-    bpy.types.Material.NormalDetailTexture
-    bpy.types.Material.GlossTexture
-    bpy.types.Material.WaveTexture
-    bpy.types.Material.DistortionTexture
-    bpy.types.Material.SpecularTexture
-    bpy.types.Material.CloudTexture
-    bpy.types.Material.CloudNormalTexture
-
-    bpy.types.Material.shaderList
-    bpy.types.Material.Emissive
-    bpy.types.Material.Diffuse
-    bpy.types.Material.Specular
-    bpy.types.Material.Shininess
-    bpy.types.Material.Colorization
-    bpy.types.Material.DebugColor
-    bpy.types.Material.UVOffset
-    bpy.types.Material.Color
-    bpy.types.Material.UVScrollRate
-    bpy.types.Material.DiffuseColor
-    # shield shader properties
-    bpy.types.Material.EdgeBrightness
-    bpy.types.Material.BaseUVScale
-    bpy.types.Material.WaveUVScale
-    bpy.types.Material.DistortUVScale
-    bpy.types.Material.BaseUVScrollRate
-    bpy.types.Material.WaveUVScrollRate
-    bpy.types.Material.DistortUVScrollRate
-    # tree properties
-    bpy.types.Material.BendScale
-    # grass properties
-    bpy.types.Material.Diffuse1
-    # skydome.fx properties
-    bpy.types.Material.CloudScrollRate
-    bpy.types.Material.CloudScale
-    # nebula.fx properties
-    bpy.types.Material.SFreq
-    bpy.types.Material.TFreq
-    bpy.types.Material.DistortionScale
-    # planet.fx properties
-    bpy.types.Material.Atmosphere
-    bpy.types.Material.CityColor
-    bpy.types.Material.AtmospherePower
-    # tryplanar mapping properties
-    bpy.types.Material.MappingScale
-    bpy.types.Material.BlendSharpness
-    # Custom material parameters
-    bpy.types.Material.UVOffsetX
-    bpy.types.Material.UVOffsetY
-    bpy.types.Material.UVScaleFactor
-    bpy.types.Material.MaskTexture
-
+    for name in settings.material_parameter_list:
+        if hasattr(bpy.types.Material, name):
+            delattr(bpy.types.Material, name)
 
 if __name__ == "__main__":
     register()

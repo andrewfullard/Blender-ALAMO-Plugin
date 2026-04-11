@@ -1,0 +1,93 @@
+{
+    "DebugColor" : {
+        "propertyType" : "FloatVectorProperty",
+        "size" : 4,
+        "default" : [0.0, 1.0, 0.0, 0.0],
+        "min"  : 0.0,
+        "max"  : 1.0
+    },
+
+
+    "Emissive" : {
+        "propertyType" : "FloatVectorProperty",
+        "size" : 4,
+        "default" : [0.0, 0.0, 0.0, 0.0],
+        "min"  : 0.0,
+        "max"  : 1.0
+    },
+    "Diffuse" : {
+        "propertyType" : "FloatVectorProperty",
+        "size" : 4,
+        "default" : [1.0, 1.0, 1.0, 0.0],
+        "min"  : 0.0,
+        "max"  : 1.0
+    },
+    "Specular" : {
+        "propertyType" : "FloatVectorProperty",
+        "size" : 4,
+        "default" : [1.0, 1.0, 1.0, 0.0],
+        "min"  : 0.0,
+        "max"  : 1.0
+    },
+    "Colorization" : {
+        "propertyType" : "FloatVectorProperty",
+        "size" : 4,
+        "default" : [1.0, 1.0, 1.0, 0.0],
+        "min"  : 0.0,
+        "max"  : 1.0
+    },
+    "Color" : {
+        "propertyType" : "FloatVectorProperty",
+        "size" : 4,
+        "default" : [1.0, 1.0, 1.0, 1.0],
+        "min"  : 0.0,
+        "max"  : 1.0
+    },
+    "DiffuseColor" : {
+        "propertyType" : "FloatVectorProperty",
+        "size" : 3,
+        "default" : [0.5, 0.5, 0.5],
+        "min"  : 0.0,
+        "max"  : 1.0
+    },
+
+
+    "UVOffset" : {
+        "propertyType" : "FloatVectorProperty",
+        "size" : 4,
+        "default" : [0.0, 0.0, 0.0, 0.0],
+        "min"  : 0.0,
+        "max"  : 1.0
+    },
+    "UVScrollRate" : {
+        "propertyType" : "FloatVectorProperty",
+        "size" : 4,
+        "default" : [0.0, 0.0, 0.0, 0.0],
+        "min"  : 0.0,
+        "max"  : 1.0
+    },
+    "Diffuse1" : {
+        "propertyType" : "FloatVectorProperty",
+        "size" : 4,
+        "default" : [1.0, 1.0, 1.0, 1.0],
+        "min"  : 0.0,
+        "max"  : 1.0
+    },
+
+
+    "Atmosphere" : {
+        "propertyType" : "FloatVectorProperty",
+        "size" : 4,
+        "default" : [0.5, 0.5, 0.5, 0.5],
+        "min"  : 0.0,
+        "max"  : 1.0
+    },
+    "CityColor" : {
+        "propertyType" : "FloatVectorProperty",
+        "size" : 4,
+        "default" : [0.5, 0.5, 0.5, 0.5],
+        "min"  : 0.0,
+        "max"  : 1.0
+    }
+
+}

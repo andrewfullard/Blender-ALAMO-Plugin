@@ -1,0 +1,374 @@
+{
+    "BatchMeshAlpha.fx": {
+        "vertexType": "alD3dVertNU2",
+        "materialParameter": [
+            "Emissive",
+            "Diffuse",
+            "Specular",
+            "Shininess",
+            "BaseTexture"
+        ]
+    },
+    "BatchMeshGloss.fx": {
+        "vertexType": "alD3dVertNU2",
+        "materialParameter": [
+            "Emissive",
+            "Diffuse",
+            "Specular",
+            "Shininess",
+            "BaseTexture"
+        ]
+    },
+    "Grass.fx": {
+        "vertexType": "alD3dVertGrass",
+        "materialParameter": [
+            "Emissive",
+            "Diffuse",
+            "Diffuse1",
+            "BendScale",
+            "BaseTexture"
+        ]
+    },
+    "MeshAdditive.fx": {
+        "vertexType": "alD3dVertNU2",
+        "materialParameter": [
+            "BaseTexture",
+            "UVScrollRate",
+            "Color"
+        ]
+    },
+    "MeshAlpha.fx": {
+        "vertexType": "alD3dVertNU2",
+        "materialParameter": [
+            "Emissive",
+            "Diffuse",
+            "Specular",
+            "Shininess",
+            "BaseTexture"
+        ]
+    },
+    "MeshAlphaScroll.fx": {
+        "vertexType": "alD3dVertNU2",
+        "materialParameter": [
+            "Emissive",
+            "Diffuse",
+            "Specular",
+            "Shininess",
+            "UVScrollRateBaseTexture"
+        ]
+    },
+    "MeshBumpColorize.fx": {
+        "vertexType": "alD3dVertNU2U3U3",
+        "hasBump" : true,
+        "materialParameter": [
+            "Emissive",
+            "Diffuse",
+            "Specular",
+            "Shininess",
+            "Colorization",
+            "UVOffset",
+            "BaseTexture",
+            "NormalTexture"
+        ]
+    },
+    "MeshBumpColorizeVertex.fx": {
+        "vertexType": "alD3dVertNU2U3U3",
+        "hasBump" : true,
+        "materialParameter": [
+            "Emissive",
+            "Diffuse",
+            "Specular",
+            "Shininess",
+            "Colorization",
+            "UVOffset",
+            "BaseTexture",
+            "NormalTexture"
+        ]
+    },
+    "MeshBumpColorizeDetail.fx": {
+        "vertexType": "alD3dVertNU2U3U3",
+        "hasBump" : true,
+        "materialParameter": [
+            "Emissive",
+            "Diffuse",
+            "Specular",
+            "Shininess",
+            "Colorization",
+            "UVOffset",
+            "BaseTexture",
+            "DetailTexture",
+            "NormalTexture",
+            "MappingScale",
+            "BlendSharpness",
+            "NormalDetailTexture"
+        ]
+    },
+    "MeshBumpLight.fx": {
+        "vertexType": "alD3dVertNU2U3U3",
+        "hasBump" : true,
+        "materialParameter": [
+            "Emissive",
+            "Diffuse",
+            "Specular",
+            "Shininess",
+            "Colorization",
+            "UVOffset",
+            "BaseTexture",
+            "NormalTexture"
+        ]
+    },
+    "MeshCollision.fx": {
+        "vertexType": "alD3dVertN",
+        "materialParameter": [
+            "Color"
+        ]
+    },
+    "MeshGloss.fx": {
+        "vertexType": "alD3dVertNU2",
+        "materialParameter": [
+            "Emissive",
+            "Diffuse",
+            "Specular",
+            "Shininess",
+            "BaseTexture"
+        ]
+    },
+    "MeshGlossColorize.fx": {
+        "vertexType": "alD3dVertNU2",
+        "materialParameter": [
+            "Emissive",
+            "Diffuse",
+            "Specular",
+            "Shininess",
+            "BaseTexture",
+            "GlossTexture"
+        ]
+    },
+    "MeshShadowVolume.fx": {
+        "vertexType": "alD3dVertN",
+        "materialParameter": [
+            "DebugColor"
+        ]
+    },
+    "MeshShield.fx": {
+        "vertexType": "alD3dVertNU2C",
+        "materialParameter": [
+            "Color",
+            "EdgeBrightness",
+            "BaseUVScale",
+            "WaveUVScale",
+            "DistortUVScale",
+            "BaseUVScrollRate",
+            "WaveUVScrollRate",
+            "DistortUVScrollRate",
+            "BaseTexture",
+            "WaveTexture",
+            "DistortionTexture"
+        ]
+    },
+    "Nebula.fx": {
+        "vertexType": "alD3dVertNU2C",
+        "materialParameter": [
+            "BaseTexture",
+            "UVScrollRate",
+            "DistortionScale",
+            "SFreq",
+            "TFreq"
+        ]
+    },
+    "Planet.fx": {
+        "vertexType": "alD3dVertNU2U3U3",
+        "hasBump" : true,
+        "materialParameter": [
+            "Emissive",
+            "Diffuse",
+            "Specular",
+            "Atmosphere",
+            "CityColor",
+            "AtmospherePower",
+            "CloudScrollRate",
+            "BaseTexture",
+            "NormalTexture",
+            "CloudTexture",
+            "CloudNormalTexture"
+        ]
+    },
+    "RSkinAdditive.fx": {
+        "vertexType": "alD3dVertRSkinNU2",
+        "materialParameter": [
+            "BaseTexture",
+            "UVScrollRate",
+            "Color"
+        ]
+    },
+    "RSkinAlpha.fx": {
+        "vertexType": "alD3dVertRSkinNU2",
+        "materialParameter": [
+            "Emissive",
+            "Diffuse",
+            "Specular",
+            "Shininess",
+            "BaseTexture"
+        ]
+    },
+    "RSkinBumpColorize.fx": {
+        "vertexType": "alD3dVertRSkinNU2U3U3",
+        "hasBump" : true,
+        "materialParameter": [
+            "Emissive",
+            "Diffuse",
+            "Specular",
+            "Shininess",
+            "Colorization",
+            "UVOffset",
+            "BaseTexture",
+            "NormalTexture"
+        ]
+    },
+    "RSkinGloss.fx": {
+        "vertexType": "alD3dVertRSkinNU2",
+        "materialParameter": [
+            "Emissive",
+            "Diffuse",
+            "Specular",
+            "Shininess",
+            "BaseTexture"
+        ]
+    },
+    "RSkinGlossColorize.fx": {
+        "vertexType": "alD3dVertRSkinNU2",
+        "materialParameter": [
+            "Emissive",
+            "Diffuse",
+            "Specular",
+            "Shininess",
+            "Colorization",
+            "BaseTexture",
+            "GlossTexture"
+        ]
+    },
+    "RSkinShadowVolume.fx": {
+        "vertexType": "alD3dVertRSkinNU2",
+        "materialParameter": [
+            "DebugColor"
+        ]
+    },
+    "Skydome.fx": {
+        "vertexType": "alD3dVertNU2",
+        "materialParameter": [
+            "Emissive",
+            "CloudScrollRate",
+            "CloudScale",
+            "BaseTexture",
+            "CloudTexture"
+        ]
+    },
+    "TerrainMeshBump.fx": {
+        "vertexType": "alD3dVertNU2U3U3",
+        "hasBump" : true,
+        "materialParameter": [
+            "Emissive",
+            "Diffuse",
+            "Specular",
+            "Shininess",
+            "BaseTexture",
+            "NormalTexture"
+        ]
+    },
+    "TerrainMeshGloss.fx": {
+        "vertexType": "alD3dVertNU2",
+        "materialParameter": [
+            "Emissive",
+            "Diffuse",
+            "Specular",
+            "Shininess",
+            "BaseTexture"
+        ]
+    },
+    "Tree.fx": {
+        "vertexType": "alD3dVertNU2",
+        "hasBump" : true,
+        "materialParameter": [
+            "Emissive",
+            "Diffuse",
+            "Specular",
+            "Shininess",
+            "BendScale",
+            "BaseTexture",
+            "NormalTexture"
+        ]
+    },
+    "LightProxy.fx": {
+        "vertexType": "alD3dVertNU2",
+        "materialParameter": [
+            "Diffuse"
+        ]
+    },
+    "MeshBumpSpecColorize.fx": {
+        "vertexType": "alD3dVertNU2U3U3",
+        "hasBump" : true,
+        "materialParameter": [
+            "Emissive",
+            "Diffuse",
+            "Specular",
+            "Shininess",
+            "Colorization",
+            "UVOffset",
+            "BaseTexture",
+            "NormalTexture",
+            "GlossTexture"
+        ]
+    },
+    "MeshAdditiveOffset.fx": {
+        "vertexType": "alD3dVertNU2",
+        "materialParameter": [
+            "BaseTexture",
+            "UVOffset"
+        ]
+    },
+    "MeshAdditiveVColor.fx": {
+        "vertexType": "alD3dVertNU2C",
+        "materialParameter": [
+            "BaseTexture",
+            "UVScrollRate",
+            "Color"
+        ]
+    },
+    "MeshAlphaGloss.fx": {
+        "vertexType": "alD3dVertNU2",
+        "materialParameter": [
+            "Emissive",
+            "Diffuse",
+            "Specular",
+            "Shininess",
+            "BaseTexture"
+        ]
+    },
+    "MeshBumpSpecGlowColorize.fx": {
+        "vertexType": "alD3dVertNU2C",
+        "hasBump" : true,
+        "materialParameter": [
+            "Emissive",
+            "Diffuse",
+            "Colorization",
+            "UVOffset",
+            "BaseTexture",
+            "NormalTexture",
+            "SpecularTexture"
+        ]
+    },
+    "MeshBumpReflectColorize.fx": {
+        "vertexType": "alD3dVertNU2U3U3",
+        "hasBump" : true,
+        "materialParameter": [
+            "Emissive",
+            "Diffuse",
+            "Specular",
+            "Shininess",
+            "Colorization",
+            "UVOffset",
+            "BaseTexture",
+            "NormalTexture"
+        ]
+    }
+}

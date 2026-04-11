@@ -1,0 +1,104 @@
+{
+    "Shininess" : {
+        "propertyType" : "FloatProperty",
+        "default" : 32.0,
+        "min"  : 0.0,
+        "max"  : 255.0
+    },
+    "EdgeBrightness" : {
+        "propertyType" : "FloatProperty",
+        "default" : 0.5,
+        "min"  : 0.0,
+        "max"  : 255.0
+    },
+    "BaseUVScale" : {
+        "propertyType" : "FloatProperty",
+        "default" : 1.0,
+        "min"  : -255.0,
+        "max"  : 255.0
+    },
+    "WaveUVScale" : {
+        "propertyType" : "FloatProperty",
+        "default" : 1.0,
+        "min"  : -255.0,
+        "max"  : 255.0
+    },
+    "DistortUVScale" : {
+        "propertyType" : "FloatProperty",
+        "default" : 1.0,
+        "min"  : -255.0,
+        "max"  : 255.0
+    },
+    "BaseUVScrollRate" : {
+        "propertyType" : "FloatProperty",
+        "default" : -0.15,
+        "min"  : -255.0,
+        "max"  : 255.0
+    },
+    "WaveUVScrollRate" : {
+        "propertyType" : "FloatProperty",
+        "default" : -0.15,
+        "min"  : -255.0,
+        "max"  : 255.0
+    },
+    "DistortUVScrollRate" : {
+        "propertyType" : "FloatProperty",
+        "default" : -0.25,
+        "min"  : -255.0,
+        "max"  : 255.0
+    },
+    "BendScale" : {
+        "propertyType" : "FloatProperty",
+        "default" : 0.4,
+        "min"  : -255.0,
+        "max"  : 255.0
+    },
+    "CloudScrollRate" : {
+        "propertyType" : "FloatProperty",
+        "default" : 0.001,
+        "min"  : -255.0,
+        "max"  : 255.0
+    },
+    "CloudScale" : {
+        "propertyType" : "FloatProperty",
+        "default" : 1.0,
+        "min"  : -255.0,
+        "max"  : 255.0
+    },
+    "SFreq" : {
+        "propertyType" : "FloatProperty",
+        "default" : 0.002,
+        "min"  : -255.0,
+        "max"  : 255.0
+    },
+    "TFreq" : {
+        "propertyType" : "FloatProperty",
+        "default" : 0.005,
+        "min"  : -255.0,
+        "max"  : 255.0
+    },
+    "DistortionScale" : {
+        "propertyType" : "FloatProperty",
+        "default" : 1.0,
+        "min"  : -255.0,
+        "max"  : 255.0
+    },
+    "AtmospherePower" : {
+        "propertyType" : "FloatProperty",
+        "default" : 1.0,
+        "min"  : -255.0,
+        "max"  : 255.0
+    },
+    "MappingScale" : {
+        "propertyType" : "FloatProperty",
+        "default" : 0.1,
+        "min"  : 0.0,
+        "max"  : 255.0
+    },
+    "BlendSharpness" : {
+        "propertyType" : "FloatProperty",
+        "default" : 0.1,
+        "min"  : 0.0,
+        "max"  : 255.0
+    }
+}

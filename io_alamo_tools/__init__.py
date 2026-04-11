@@ -13,6 +13,8 @@ from bpy.props import *
 import mathutils
 import bpy
 import importlib
+import os
+import json
 
 bl_info = {
     "name": "ALAMO Tools",
@@ -75,8 +77,36 @@ def menu_func_export(self, context):
     self.layout.operator(export_alo.ALO_Exporter.bl_idname, text=".ALO Exporter")
     self.layout.operator(export_ala.ALA_Exporter.bl_idname, text=".ALA Exporter")
 
+def load_shader_json():
+    addon_dir = os.path.dirname(__file__)
+    shaders_dir = os.path.join(addon_dir, "shaders")
+    data = {}
+
+    for filename in os.listdir(shaders_dir):
+        if filename.lower().endswith(".json"):
+            path = os.path.join(shaders_dir, filename)
+
+            try:
+                with open(path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+
+                    for name in data:
+                        vert = data[name].get("vertexType")
+                        parm = data[name].get("materialParameter")
+                        bump = data[name].get("hasBump", False)
+
+                        if bump:
+                            settings.bumpMappingList.append(name)
+                        settings.material_parameter_dict[name] = parm
+                        settings.vertex_format_dict[name] = vert
+
+            except json.JSONDecodeError as e:
+                print(f"Error parsing JSON: {e}")
 
 def register():
+    load_shader_json()
+    settings.material_parameter_dict = dict(sorted(settings.material_parameter_dict.items()))
+
     import_modules()
     UI.register()
     UI_material.register()

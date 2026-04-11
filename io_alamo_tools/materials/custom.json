@@ -1,0 +1,26 @@
+{
+    "MaskTexture" : {
+        "propertyType" : "StringProperty",
+        "default" : "None"
+    },
+
+    "UVOffsetX" : {
+        "propertyType" : "FloatProperty",
+        "default" : 1.0,
+        "min"  : 0.01,
+        "max"  : 255.0
+    },
+    "UVOffsetY" : {
+        "propertyType" : "FloatProperty",
+        "default" : 1.0,
+        "min"  : 0.01,
+        "max"  : 255.0
+    },
+    "UVScaleFactor" : {
+        "propertyType" : "FloatProperty",
+        "default" : 1.0,
+        "min"  : 0.01,
+        "max"  : 255.0
+    }
+
+}

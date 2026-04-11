@@ -832,90 +832,21 @@ class ALO_Exporter(bpy.types.Operator, ExportHelper):
         def create_mat_info_chunks(mat_name, material):
             chunk = b''
             for parameter in settings.material_parameter_dict[mat_name]:
-                if (parameter == "Color"):
-                    chunk += mat_float4_chunk("Color", material.Color)
-                elif (parameter == "Emissive"):
-                    chunk += mat_float4_chunk("Emissive", material.Emissive)
-                elif (parameter == "Diffuse"):
-                    chunk += mat_float4_chunk("Diffuse", material.Diffuse)
-                elif (parameter == "Specular"):
-                    chunk += mat_float4_chunk("Specular", material.Specular)
-                elif (parameter == "Shininess"):
-                    chunk += mat_float_chunk("Shininess", material.Shininess)
-                elif (parameter == "BaseTexture"):
-                    chunk += mat_tex_chunk("BaseTexture", material.BaseTexture)
-                elif (parameter == "NormalDetailTexture"):
-                    chunk += mat_tex_chunk("NormalDetailTexture", material.NormalDetailTexture)
-                elif (parameter == "DetailTexture"):
-                    chunk += mat_tex_chunk("DetailTexture", material.DetailTexture)
-                elif (parameter == "NormalTexture"):
-                    chunk += mat_tex_chunk("NormalTexture", material.NormalTexture)
-                elif (parameter == "DebugColor"):
-                    chunk += mat_float4_chunk("DebugColor", material.DebugColor)
-                elif (parameter == "UVScrollRate"):
-                    chunk += mat_float4_chunk("UVScrollRate", material.UVScrollRate)
-                elif (parameter == "BendScale"):
-                    chunk += mat_float_chunk("BendScale", material.BendScale)
-                elif (parameter == "UVOffset"):
-                    chunk += mat_float4_chunk("UVOffset", material.UVOffset)
-                elif (parameter == "Colorization"):
-                    chunk += mat_float4_chunk("Colorization", material.Colorization)
-                elif (parameter == "GlossTexture"):
-                    chunk += mat_tex_chunk("GlossTexture", material.GlossTexture)
-                elif (parameter == "BaseUVScale"):
-                    chunk += mat_float_chunk("BaseUVScale", material.BaseUVScale)
-                elif (parameter == "WaveUVScale"):
-                    chunk += mat_float_chunk("WaveUVScale", material.WaveUVScale)
-                elif (parameter == "DistortUVScale"):
-                    chunk += mat_float_chunk("DistortUVScale", material.DistortUVScale)
-                elif (parameter == "BaseUVScrollRate"):
-                    chunk += mat_float_chunk("BaseUVScrollRate", material.BaseUVScrollRate)
-                elif (parameter == "WaveUVScrollRate"):
-                    chunk += mat_float_chunk("WaveUVScrollRate", material.WaveUVScrollRate)
-                elif (parameter == "DistortUVScrollRate"):
-                    chunk += mat_float_chunk("DistortUVScrollRate", material.DistortUVScrollRate)
-                elif (parameter == "WaveTexture"):
-                    chunk += mat_tex_chunk("WaveTexture", material.WaveTexture)
-                elif (parameter == "DistortionTexture"):
-                    chunk += mat_tex_chunk("DistortionTexture", material.DistortionTexture)
-                elif (parameter == "SpecularTexture"):
-                    chunk += mat_tex_chunk("SpecularTexture", material.SpecularTexture)
-                elif (parameter == "UVScrollRate"):
-                    chunk += mat_float4_chunk("UVScrollRate", material.UVScrollRate)
-                elif (parameter == "DistortionScale"):
-                    chunk += mat_float_chunk("DistortionScale", material.DistortionScale)
-                elif (parameter == "SFreq"):
-                    chunk += mat_float_chunk("SFreq", material.SFreq)
-                elif (parameter == "TFreq"):
-                    chunk += mat_float_chunk("TFreq", material.TFreq)
-                elif (parameter == "Atmosphere"):
-                    chunk += mat_float4_chunk("Atmosphere", material.Atmosphere)
-                elif (parameter == "CityColor"):
-                    chunk += mat_float4_chunk("CityColor", material.CityColor)
-                elif (parameter == "AtmospherePower"):
-                    chunk += mat_float_chunk("AtmospherePower", material.AtmospherePower)
-                elif (parameter == "CloudScrollRate"):
-                    chunk += mat_float_chunk("CloudScrollRate", material.CloudScrollRate)
-                elif (parameter == "CloudTexture"):
-                    chunk += mat_tex_chunk("CloudTexture", material.CloudTexture)
-                elif (parameter == "CloudNormalTexture"):
-                    chunk += mat_tex_chunk("CloudNormalTexture", material.CloudNormalTexture)
-                elif (parameter == "EdgeBrightness"):
-                    chunk += mat_float_chunk("EdgeBrightness", material.EdgeBrightness)
-                elif (parameter == "MappingScale"):
-                    chunk += mat_float_chunk("MappingScale", material.MappingScale)
-                elif (parameter == "BlendSharpness"):
-                    chunk += mat_float_chunk("BlendSharpness", material.MappingScale)
-                elif (parameter == "UVOffsetX"):
-                    chunk += mat_float_chunk("UVOffsetX", material.UVOffsetX)
-                elif (parameter == "UVOffsetY"):
-                    chunk += mat_float_chunk("UVOffsetY", material.UVOffsetY)
-                elif (parameter == "UVScaleFactor"):
-                    chunk += mat_float_chunk("UVScaleFactor", material.UVScaleFactor)
-                elif (parameter == "MaskTexture"):
-                    chunk += mat_tex_chunk("MaskTexture", material.MaskTexture)
-                #else:
-                    #print("warning: unkown shader parameter: " + parameter)    #for debugging
+                rna = material.bl_rna.properties[parameter] # Get type metadata
+
+                # getattr() gets instance data from each material
+                match rna.type:
+                    case "FLOAT":
+                        match rna.array_length:
+                            case 0:
+                                chunk += mat_float_chunk(parameter, getattr(material, parameter))
+                            case 4:
+                                chunk += mat_float4_chunk(parameter, getattr(material, parameter))
+                    case "STRING":
+                        chunk += mat_tex_chunk(parameter, getattr(material, parameter))
+                    case _:
+                        return
+
             return chunk
 
         def create_collision_chunk(bm, file):
