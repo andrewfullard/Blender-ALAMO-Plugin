@@ -41,153 +41,113 @@ def chunk_size(size):
             #add 2147483648 instead of binary operation
             return size+2147483648
 
-def calculateTranslationScale(bone, translationOffset, armature, translationList):
-    scene = bpy.context.scene  # current scene
-    # check for every bone if it has translation data
-    if (bone.name in translationList):
-        scene.frame_set(0)
-        pose = armature.pose.bones[bone.name]  # get the pose bone
-        # search for maximum translation
-        maxX = 0
-        maxY = 0
-        maxZ = 0
+def get_relative_matrix(pose):
+    """Pose matrix relative to the parent bone (or armature space for root bones)."""
+    if pose.parent != None:
+        return pose.parent.matrix.inverted() @ pose.matrix
+    return pose.matrix
 
-        action = utils.getCurrentAction()
-        animLength = action.AnimationEndFrame
+def get_relative_translation(pose):
+    return get_relative_matrix(pose).decompose()[0]
 
-        while (scene.frame_current <= animLength):  # iterate over every frame
-            if pose.parent != None:
-                translation_relative = (pose.parent.matrix.inverted() @ pose.matrix).decompose()[0]
-            else:
-                translation_relative = pose.matrix.decompose()[0]
+def get_relative_rotation(pose):
+    return get_relative_matrix(pose).decompose()[1]
 
-            if (abs(translation_relative[0] - translationOffset[0]) > maxX):
-                maxX = abs(translation_relative[0] - translationOffset[0])
-            if (abs(translation_relative[1] - translationOffset[1]) > maxY):
-                maxY = abs(translation_relative[1] - translationOffset[1])
-            if (abs(translation_relative[2] - translationOffset[2]) > maxZ):
-                maxZ = abs(translation_relative[2] - translationOffset[2])
-            scene.frame_set(scene.frame_current + 1)
-        scene.frame_set(0)
+# ---------------------------------------------------------------------------
+# Per-frame sampling. These only read the current scene frame.
+# ---------------------------------------------------------------------------
 
-        if (maxX == 0):
-            maxX = 1
-        if (maxY == 0):
-            maxY = 1
-        if (maxZ == 0):
-            maxZ = 1
+def sample_translations(translationList, armature):
+    """Relative translation of every bone in translationList at the current frame."""
+    return [get_relative_translation(armature.pose.bones[name]) for name in translationList]
 
-        scaleX = maxX / 65535.0
-        scaleY = maxY / 65535.0
-        scaleZ = maxZ / 65535.0
+def create_rotation_frame_data(rotationList, armature):
+    """Packed rotation data of every bone in rotationList at the current frame."""
+    chunk = b''
+    for name in rotationList:
+        rotation_relative = get_relative_rotation(armature.pose.bones[name])
+        chunk += struct.pack("<h", int(round(rotation_relative[1] * 32767)))
+        chunk += struct.pack("<h", int(round(rotation_relative[2] * 32767)))
+        chunk += struct.pack("<h", int(round(rotation_relative[3] * 32767)))
+        chunk += struct.pack("<h", int(round(rotation_relative[0] * 32767)))
+    return chunk
 
-        translationScale = (scaleX, scaleY, scaleZ)
-
-        global translationScaleDict
-        translationScaleDict[bone.name] = translationScale
-
-        return mathutils.Vector(translationScale)
-    else:
-        return mathutils.Vector((0, 0, 0))
-
-def calculateTranslationOffset(bone, armature, translationList):
-    scene = bpy.context.scene  # current scene
-    # check for every bone if it has translation data
+def get_visibility_bit(armature, bone):
+    """'1' if the bone is visible at the current frame, '0' otherwise."""
     pose = armature.pose.bones[bone.name]
+    parentPose = armature.pose.bones[bone.parent.name] if bone.parent is not None else None
+    if pose.proxyIsHiddenAnimation or (parentPose is not None and parentPose.proxyIsHiddenAnimation):
+        return '0'
+    return '1'
 
+# ---------------------------------------------------------------------------
+# Processing of the sampled data
+# ---------------------------------------------------------------------------
+
+def calculateTranslationOffset(bone, armature, translationList, translationSamples):
     # if the bone has no animated translation data the offset is the relative translation data at an arbitrary frame, first frame is used
+    # (the scene must be at frame 0 when this is called)
     # if the bone has animated translation data, the offset is the minimum of every translation
     # this is necessary because the translation data is stored as unsigned shorts, so every relative motion has to be positive
+    if bone.name not in translationList:
+        return get_relative_translation(armature.pose.bones[bone.name])
 
-    if (bone.name in translationList):
-        scene.frame_set(0)
-        minX = 65535
-        minY = 65535
-        minZ = 65535
+    index = translationList.index(bone.name)
+    minimum = [65535, 65535, 65535]
+    for frameSamples in translationSamples:
+        translation_relative = frameSamples[index]
+        for axis in range(3):
+            minimum[axis] = min(minimum[axis], translation_relative[axis])
+    return mathutils.Vector(minimum)
 
-        action = utils.getCurrentAction()
-        animLength = action.AnimationEndFrame
+def calculateTranslationScale(bone, translationOffset, translationList, translationSamples):
+    if bone.name not in translationList:
+        return mathutils.Vector((0, 0, 0))
 
-        while (scene.frame_current <= animLength):  # iterate over every frame
-            if pose.parent != None:
-                translation_relative = (pose.parent.matrix.inverted() @ pose.matrix).decompose()[0]
-            else:
-                translation_relative = pose.matrix.decompose()[0]
-            if (translation_relative[0] < minX):
-                minX = translation_relative[0]
-            if (translation_relative[1] < minY):
-                minY = translation_relative[1]
-            if (translation_relative[2] < minZ):
-                minZ = translation_relative[2]
-            scene.frame_set(scene.frame_current + 1)
-        scene.frame_set(0)
+    # search for maximum translation
+    index = translationList.index(bone.name)
+    maximum = [0, 0, 0]
+    for frameSamples in translationSamples:
+        translation_relative = frameSamples[index]
+        for axis in range(3):
+            distance = abs(translation_relative[axis] - translationOffset[axis])
+            maximum[axis] = max(maximum[axis], distance)
 
-        return mathutils.Vector((minX, minY, minZ))
-    else:
-        if pose.parent != None:
-            return (pose.parent.matrix.inverted() @ pose.matrix).decompose()[0]
-        else:
-            return pose.matrix.decompose()[0]
+    return mathutils.Vector([(m if m != 0 else 1) / 65535.0 for m in maximum])
 
-def create_translation_data(translationList, armature):
-    scene = bpy.context.scene
-    scene.frame_set(0)
+def create_translation_frame_data(frameSamples, translationList, translationOffsets, translationScales):
+    """Packed translation data for one frame's samples (as returned by sample_translations)."""
     chunk = b''
+    for name, translation_relative in zip(translationList, frameSamples):
+        offset = translationOffsets[name]
+        scale = translationScales[name]
+        chunk += struct.pack("<H", int((translation_relative[0] - offset[0]) / scale[0]))
+        chunk += struct.pack("<H", int((translation_relative[1] - offset[1]) / scale[1]))
+        chunk += struct.pack("<H", int((translation_relative[2] - offset[2]) / scale[2]))
+    return chunk
 
-    action = utils.getCurrentAction()
-    animLength = action.AnimationEndFrame
-
-    while (scene.frame_current <= animLength):
-        for name in translationList:
-            bone = armature.data.bones[name]
-            pose = armature.pose.bones[bone.name]
-            if pose.parent != None:
-                translation_relative = (pose.parent.matrix.inverted() @ pose.matrix).decompose()[0]
-            else:
-                translation_relative = pose.matrix.decompose()[0]
-
-            chunk += struct.pack("<H", int((translation_relative[0] - translationOffsetDict[pose.name][0]) / translationScaleDict[bone.name][0]))
-            chunk += struct.pack("<H", int((translation_relative[1] - translationOffsetDict[pose.name][1]) / translationScaleDict[bone.name][1]))
-            chunk += struct.pack("<H", int((translation_relative[2] - translationOffsetDict[pose.name][2]) / translationScaleDict[bone.name][2]))
-
-        scene.frame_set(scene.frame_current + 1)
-    scene.frame_set(0)
-
-    chunk_header = (b'\x0a\x10\x00\00')  # chunk header
-    chunk_header += struct.pack("<I", len(chunk))  # chunk size
-    if len(chunk) == 0:
+def wrap_data_chunk(chunk_id, data):
+    """Prefix data with a chunk header; empty data produces no chunk."""
+    if len(data) == 0:
         return b''
-    return chunk_header + chunk
+    return chunk_id + struct.pack("<I", len(data)) + data
 
-def create_rotation_data(rotationList, armature):
-    chunk = (b'')
-    scene = bpy.context.scene
-    scene.frame_set(0)
+def create_translation_data(translationData):
+    return wrap_data_chunk(b'\x0a\x10\x00\x00', translationData)
 
-    action = utils.getCurrentAction()
-    animLength = action.AnimationEndFrame
+def create_rotation_data(rotationData):
+    return wrap_data_chunk(b'\x09\x10\x00\x00', rotationData)
 
-    while (scene.frame_current <= animLength):
-        for name in rotationList:
-            bone = armature.data.bones[name]
+# ---------------------------------------------------------------------------
 
-            pose = armature.pose.bones[bone.name]
-            if pose.parent == None:
-                rotation_relative = pose.matrix.decompose()[1]
-            else:
-                rotation_relative = (pose.parent.matrix.inverted() @ pose.matrix).decompose()[1]
-            chunk += struct.pack("<h", int(round(rotation_relative[1] * 32767)))
-            chunk += struct.pack("<h", int(round(rotation_relative[2] * 32767)))
-            chunk += struct.pack("<h", int(round(rotation_relative[3] * 32767)))
-            chunk += struct.pack("<h", int(round(rotation_relative[0] * 32767)))
-        scene.frame_set(scene.frame_current + 1)
-    scene.frame_set(0)
+def enter_pose_mode(armature):
+    # for animation data we have to go into pose mode
+    utils.setModeToObject()
 
-    chunk_header = (b"\x09\x10\x00\00")  # chunk header
-    chunk_header += struct.pack("<I", len(chunk))  # chunk size
-    if len(chunk) == 0:
-        return b''
-    return chunk_header + chunk
+    # select the skeleton
+    armature.select_set(True)
+    bpy.context.view_layer.objects.active = armature
+    bpy.ops.object.mode_set(mode='POSE')  # enter pose mode
 
 def create_animation():
 
@@ -222,14 +182,47 @@ def create_animation():
                 if (not (pose.name in rotationList)):
                     rotationList.append(pose.name)  # if list doesnt contaion bone name add it
 
-    bpy.context.scene.frame_set(0)  # set scene to first frame, needed for default rotation/translation
-    # add the bone data chunks for every bone
-    for bone in armature.data.bones:
-        if (bone.name != "Root"):
-            chunk += create_bone_data(bone, translationList, rotationList, armature)
+    exportBones = [bone for bone in armature.data.bones if bone.name != "Root"]
+    visibilityBones = [bone for bone in exportBones if has_visibility_data(armature, bone)]
 
-    chunk += create_translation_data(translationList, armature)  # add translation data chunk
-    chunk += create_rotation_data(rotationList, armature)  # add rotation data chunk
+    enter_pose_mode(armature)
+
+    # single pass over every frame, collecting all per-frame data
+    scene = bpy.context.scene
+    animLength = utils.getCurrentAction().AnimationEndFrame
+
+    translationSamples = []  # one list of relative translations per frame
+    rotationData = b''
+    visibilityBits = {bone.name: '' for bone in visibilityBones}
+
+    for frame in range(animLength + 1):
+        scene.frame_set(frame)
+        translationSamples.append(sample_translations(translationList, armature))
+        rotationData += create_rotation_frame_data(rotationList, armature)
+        for bone in visibilityBones:
+            visibilityBits[bone.name] += get_visibility_bit(armature, bone)
+
+    scene.frame_set(0)  # set scene to first frame, needed for default rotation/translation
+
+    translationOffsets = {}
+    translationScales = {}
+    for bone in exportBones:
+        offset = calculateTranslationOffset(bone, armature, translationList, translationSamples)
+        translationOffsets[bone.name] = offset
+        translationScales[bone.name] = calculateTranslationScale(bone, offset, translationList, translationSamples)
+
+    # add the bone data chunks for every bone
+    for bone in exportBones:
+        chunk += create_bone_data(bone, translationList, rotationList, armature,
+                                  translationOffsets[bone.name], translationScales[bone.name],
+                                  visibilityBits.get(bone.name))
+
+    translationData = b''
+    for frameSamples in translationSamples:
+        translationData += create_translation_frame_data(frameSamples, translationList, translationOffsets, translationScales)
+
+    chunk += create_translation_data(translationData)  # add translation data chunk
+    chunk += create_rotation_data(rotationData)  # add rotation data chunk
 
     header = (b"\x00\x10\x00\00")
     header += struct.pack("<I", chunk_size(len(chunk))) # chunk size
@@ -288,36 +281,19 @@ def create_anim_info_chunk(armature):
 
     return chunkHeader + chunk
 
-def create_bone_data(bone, translationList, rotationList, armature):
-    chunk = create_bone_animation_info_chunk(bone, translationList, rotationList, armature)
+def create_bone_data(bone, translationList, rotationList, armature, translationOffset, translationScale, visibilityBits):
+    chunk = create_bone_animation_info_chunk(bone, translationList, rotationList, armature, translationOffset, translationScale, visibilityBits)
     header = (b"\x02\x10\x00\00")
     header += struct.pack("<I", chunk_size(len(chunk))) # add length
     return header + chunk
     # add support for step key track
 
-def create_bone_animation_info_chunk(bone, translationList, rotationList, armature):
-
-    # for animation data we have to go into pose mode
-    utils.setModeToObject()
-
-    # select the skeleton
-    armature.select_set(True)
-    bpy.context.view_layer.objects.active = armature
-    bpy.ops.object.mode_set(mode='POSE')  # enter pose mode
+def create_bone_animation_info_chunk(bone, translationList, rotationList, armature, translationOffset, translationScale, visibilityBits):
+    # expects the scene to be at frame 0 and in post mode
     pose = armature.pose.bones[bone.name]
 
-    scene = bpy.context.scene
-    scene.frame_set(0)
-    translationOffset = calculateTranslationOffset(bone, armature, translationList)
-    global translationOffsetDict
-    translationOffsetDict[bone.name] = translationOffset
-    translationScale = calculateTranslationScale(bone, translationOffset, armature, translationList)
-
     # default rotation is rotation of first frame
-    if pose.parent != None:
-        default_rotation = (pose.parent.matrix.inverted() @ pose.matrix).decompose()[1]
-    else:
-        default_rotation = pose.matrix.decompose()[1]
+    default_rotation = get_relative_rotation(pose)
 
     chunk = b'\x04'  # mini chunk name
     name = utils.clean_name(bone.name)
@@ -397,46 +373,24 @@ def create_bone_animation_info_chunk(bone, translationList, rotationList, armatu
 
     chunk = header + chunk
 
-    visibility_chunk = create_visibility_chunk(armature, bone)
+    visibility_chunk = create_visibility_chunk(visibilityBits)
 
     return chunk + visibility_chunk
 
-def create_visibility_chunk(armature, bone):
-    dataExists = False
+def has_visibility_data(armature, bone):
     channelbag = anim_utils.action_get_channelbag_for_slot(armature.animation_data.action, armature.animation_data.action_slot)
     for curve in channelbag.fcurves:
-        # by spliting and comparing the data path we know which bone has rotation/location keyframes
+        # by spliting and comparing the data path we know which bone has visibility keyframes
         parts = curve.data_path.split('"')
         if (parts[2] == '].proxyIsHiddenAnimation'):
             if parts[1] == bone.name or (bone.parent is not None and bone.parent.name == parts[1]):
-                dataExists = True
-                break
+                return True
+    return False
 
-    if not dataExists:
+def create_visibility_chunk(binary):
+    """binary: string of '0'/'1' per frame, or None if the bone has no visibility data."""
+    if binary is None:
         return b''
-
-    scene = bpy.context.scene
-    binary = ''
-
-    pose = armature.pose.bones[bone.name]
-    
-    parentPose = {}
-    if bone.parent is not None:
-        parentPose = armature.pose.bones[bone.parent.name]
-    else:
-        parentPose = None
-
-    action = utils.getCurrentAction()
-    animLength = action.AnimationEndFrame
-
-    scene.frame_set(0)
-    while scene.frame_current <= animLength:
-        if pose.proxyIsHiddenAnimation or (parentPose is not None and parentPose.proxyIsHiddenAnimation):
-            binary += '0'
-        else:
-            binary += '1'
-        scene.frame_set(scene.frame_current + 1)
-    scene.frame_set(0)
 
     while len(binary)%8 != 0:
         binary += '0'
@@ -448,7 +402,6 @@ def create_visibility_chunk(armature, bone):
         int_value = int(binaryReverse, 2)
         chunk += struct.pack('<B', int_value)
         binary = binary[8:]
-    print()
     chunkHeader = b'\x07\x10\x00\00'
     chunkHeader += struct.pack('<I', len(chunk))
     return chunkHeader + chunk
@@ -458,11 +411,6 @@ class AnimationExporter():
     def exportAnimation(self, path):
         if os.access(path, os.W_OK) or not os.access(path, os.F_OK):
             file = open(path, 'wb')  # open file in read binary mode
-
-            global translationOffsetDict
-            translationOffsetDict = {}
-            global translationScaleDict
-            translationScaleDict = {}
             file.write(create_animation())
             file.close()
             file = None
