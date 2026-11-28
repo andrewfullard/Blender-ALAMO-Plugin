@@ -448,7 +448,7 @@ class ALO_Importer(bpy.types.Operator):
 
             group_out = node('NodeGroupOutput')
             group_out.location.x += 200.0
-            node_group.outputs.new('NodeSocketShader', 'Surface')
+            node_group.interface.new_socket('Surface', socket_type='NodeSocketShader', in_out='OUTPUT')
 
             mix_shader = node("ShaderNodeMixShader")
 
@@ -462,8 +462,8 @@ class ALO_Importer(bpy.types.Operator):
             if is_emissive:
                 group_in = node('NodeGroupInput')
                 group_in.location.x -= 700
-                emissive = node_group.inputs.new(
-                    'NodeSocketFloat', 'Emissive Strength')
+                emissive = node_group.interface.new_socket(
+                    'Emissive Strength', socket_type='NodeSocketFloat', in_out='INPUT')
                 emissive.default_value = 1.0
                 color = node("ShaderNodeEmission")
                 link(group_in.outputs[0], color.inputs[1])
@@ -504,15 +504,15 @@ class ALO_Importer(bpy.types.Operator):
 
             group_in = node('NodeGroupInput')
             group_in.location.x -= 700
-            node_group.inputs.new('NodeSocketColor', 'Team Color')
-            spec = node_group.inputs.new(
-                'NodeSocketFloat', 'Specular Intensity')
+            node_group.interface.new_socket('Team Color', in_out='INPUT', socket_type='NodeSocketColor')
+            spec = node_group.interface.new_socket(
+                 'Specular Intensity', in_out='INPUT', socket_type='NodeSocketFloat')
             spec.default_value = 0.1
 
             group_out = node('NodeGroupOutput')
-            node_group.outputs.new('NodeSocketColor', 'Base Color')
-            node_group.outputs.new('NodeSocketFloat', 'Specular')
-            node_group.outputs.new('NodeSocketVector', 'Normal')
+            node_group.interface.new_socket('Base Color', in_out='OUTPUT', socket_type='NodeSocketColor')
+            node_group.interface.new_socket('Specular', in_out='OUTPUT', socket_type='NodeSocketFloat')
+            node_group.interface.new_socket('Normal', in_out='OUTPUT', socket_type='NodeSocketVector')
 
             base_image_node = node("ShaderNodeTexImage")
             base_image_node.location.x -= 500
@@ -529,7 +529,7 @@ class ALO_Importer(bpy.types.Operator):
             normal_image_node.location.x -= 1100.0
             normal_image_node.location.y -= 300.0
 
-            normal_split = node("ShaderNodeSeparateRGB")
+            normal_split = node("ShaderNodeSeparateColor")
             normal_split.location.x -= 800
             normal_split.location.y -= 300
             normal_invert = node("ShaderNodeMath")
@@ -537,7 +537,7 @@ class ALO_Importer(bpy.types.Operator):
             normal_invert.inputs[0].default_value = 1
             normal_invert.location.x -= 600
             normal_invert.location.y -= 300
-            normal_combine = node("ShaderNodeCombineRGB")
+            normal_combine = node("ShaderNodeCombineColor")
             normal_combine.location.x -= 400
             normal_combine.location.y -= 300
 
@@ -552,11 +552,11 @@ class ALO_Importer(bpy.types.Operator):
             specular_multiply.location.y -= 100
 
             link(normal_image_node.outputs['Color'],
-                 normal_split.inputs['Image'])
-            link(normal_split.outputs['R'], normal_combine.inputs['R'])
-            link(normal_split.outputs['G'], normal_invert.inputs[1])
-            link(normal_invert.outputs[0], normal_combine.inputs['G'])
-            link(normal_split.outputs['B'], normal_combine.inputs['B'])
+                 normal_split.inputs['Color'])
+            link(normal_split.outputs['Red'], normal_combine.inputs['Red'])
+            link(normal_split.outputs['Green'], normal_invert.inputs[1])
+            link(normal_invert.outputs[0], normal_combine.inputs['Green'])
+            link(normal_split.outputs['Blue'], normal_combine.inputs['Blue'])
             link(normal_combine.outputs[0], normal_map_node.inputs[1])
             link(normal_map_node.outputs[0], group_out.inputs[2])
 
@@ -577,7 +577,7 @@ class ALO_Importer(bpy.types.Operator):
                 normal_texture = bpy.data.images[material.NormalTexture]
                 normal_texture.alpha_mode = 'CHANNEL_PACKED'
                 normal_image_node.image = normal_texture
-                normal_image_node.image.colorspace_settings.name = 'Raw'
+                #normal_image_node.image.colorspace_settings.name = 'Raw'
 
             return node_group
 
@@ -613,8 +613,8 @@ class ALO_Importer(bpy.types.Operator):
                 links.new(mat_group.outputs[0], output.inputs['Surface'])
             else:
                 bsdf = nodes.new("ShaderNodeBsdfPrincipled")
-                bsdf.inputs[4].default_value = 0.1  # Set metallic to 0.1
-                bsdf.inputs[7].default_value = 0.2  # Set roughness to 0.2
+                bsdf.inputs['Metallic'].default_value = 0.1  # Set metallic to 0.1
+                bsdf.inputs['Roughness'].default_value = 0.2  # Set roughness to 0.2
                 bsdf.location.x -= 300.0
                 links.new(bsdf.outputs['BSDF'], output.inputs['Surface'])
                 my_group = material_group_basic(
@@ -623,7 +623,7 @@ class ALO_Importer(bpy.types.Operator):
                 mat_group.node_tree = bpy.data.node_groups[my_group.name]
                 mat_group.location.x -= 500.0
                 links.new(mat_group.outputs[0], bsdf.inputs['Base Color'])
-                links.new(mat_group.outputs[1], bsdf.inputs[5])
+                links.new(mat_group.outputs[1], bsdf.inputs['Specular IOR Level'])
                 links.new(mat_group.outputs[2], bsdf.inputs['Normal'])
 
         def create_material(currentSubMesh):
@@ -941,8 +941,7 @@ class ALO_Importer(bpy.types.Operator):
         
         def hideObject(object):
 
-            # set correct area type via context overwrite
-            context_override = bpy.context.copy()
+            # set correct area type via temp context override
             area = None
             for window in bpy.context.window_manager.windows:
                 screen = window.screen
@@ -951,12 +950,11 @@ class ALO_Importer(bpy.types.Operator):
                         area = a
                         break
 
-            context_override['area'] = area
-
-            bpy.ops.object.select_all(context_override, action='DESELECT')
-            object.select_set(True)
-            bpy.ops.object.hide_view_set(context_override)
-            object.hide_render = True
+            with context.temp_override(area=area):
+                bpy.ops.object.select_all(action='DESELECT')
+                object.select_set(True)
+                bpy.ops.object.hide_view_set()
+                object.hide_render = True
 
         def hideLODs():
             # hides all but the most detailed LOD in Blender
